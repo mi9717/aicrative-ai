@@ -1,4 +1,4 @@
-const { createHmac, timingSafeEqual } = require('node:crypto');
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 function signature(password) {
   return createHmac('sha256', password).update('aicrative-shared-access-v1').digest('hex');
@@ -14,7 +14,7 @@ function validCookie(req, password) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-module.exports = function handler(req, res) {
+export default function handler(req, res) {
   const password = process.env.AICRATIVE_ACCESS_PASSWORD;
   if (!password) return res.status(503).json({ message: 'Password akses belum dikonfigurasi di Vercel.' });
 
@@ -34,4 +34,4 @@ module.exports = function handler(req, res) {
   }
   res.setHeader('Allow', 'GET, POST');
   return res.status(405).json({ message: 'Method not allowed.' });
-};
+}
