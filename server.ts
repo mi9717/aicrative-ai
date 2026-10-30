@@ -107,27 +107,31 @@ function safeCompare(input: string, expected?: string): boolean {
 }
 
 // -------------------------------------------------------------
-// SESSION REGISTRY (Cryptographically random tokens)
-// -------------------------------------------------------------
-interface SessionRecord {
-  token: string;
-  createdAt: number;
-  expiresAt: number;
-  ip: string;
+// STATELESS SIGNED SESSIONS (works across Vercel serverless instances)
+const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+const SESSION_SECRET = process.env.SESSION_SECRET?.trim();
+
+function createSessionToken(): { token: string; expiresAt: number } {
+  const expiresAt = Date.now() + SESSION_DURATION_MS;
+  const payload = Buffer.from(JSON.stringify({ exp: expiresAt })).toString('base64url');
+  const signature = crypto.createHmac('sha256', SESSION_SECRET || '').update(payload).digest('base64url');
+  return { token: payload + '.' + signature, expiresAt };
 }
 
-const activeSessions = new Map<string, SessionRecord>();
-const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-// Cleanup expired sessions every 30 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, session] of activeSessions.entries()) {
-    if (session.expiresAt <= now) {
-      activeSessions.delete(token);
-    }
-  }
-}, 30 * 60 * 1000);
+function isValidSessionToken(token: string): boolean {
+  if (!SESSION_SECRET) return false;
+  const parts = token.split('.');
+  if (parts.length !== 2) return false;
+  const [payload, signature] = parts;
+  const expected = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest();
+  let supplied: Buffer;
+  try { supplied = Buffer.from(signature, 'base64url'); } catch { return false; }
+  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return false;
+  try {
+    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+    return typeof data.exp === 'number' && data.exp > Date.now();
+  } catch { return false; }
+}
 
 function parseCookies(cookieHeader?: string): Record<string, string> {
   const list: Record<string, string> = {};
@@ -136,7 +140,7 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
     const parts = cookie.split('=');
     const name = parts.shift()?.trim();
     if (name) {
-      list[name] = decodeURIComponent(parts.join('='));
+      try { list[name] = decodeURIComponent(parts.join('=')); } catch {}
     }
   });
   return list;
@@ -144,35 +148,16 @@ function parseCookies(cookieHeader?: string): Record<string, string> {
 
 function extractToken(req: Request): string | null {
   const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7).trim();
-  }
-  const cookies = parseCookies(req.headers['cookie']);
-  if (cookies['aicrative_session']) {
-    return cookies['aicrative_session'];
-  }
-  return null;
+  if (authHeader && authHeader.startsWith('Bearer ')) return authHeader.substring(7).trim();
+  return parseCookies(req.headers['cookie'])['aicrative_session'] || null;
 }
 
-// Session authentication middleware
 function requireSession(req: Request, res: Response, next: NextFunction): void {
   const token = extractToken(req);
-  if (!token) {
-    res.status(401).json({
-      error: 'Akses ditolak: Autentikasi sesi diperlukan sebelum mengakses fitur ini.',
-    });
+  if (!token || !isValidSessionToken(token)) {
+    res.status(401).json({ error: 'Sesi telah kedaluwarsa atau tidak valid. Silakan masukkan password kembali.' });
     return;
   }
-
-  const session = activeSessions.get(token);
-  if (!session || session.expiresAt <= Date.now()) {
-    if (session) activeSessions.delete(token);
-    res.status(401).json({
-      error: 'Sesi telah kedaluwarsa atau tidak valid. Silakan masukkan password kembali.',
-    });
-    return;
-  }
-
   next();
 }
 
@@ -197,7 +182,11 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
     return;
   }
 
-  // Validate that the server environment has configured APP_ACCESS_PASSWORD
+  // Both secrets must be configured on the server.
+  if (!SESSION_SECRET) {
+    res.status(500).json({ error: 'Konfigurasi server belum lengkap: SESSION_SECRET belum diatur.' });
+    return;
+  }
   if (!APP_ACCESS_PASSWORD) {
     console.error('[AUTH CONFIG ERROR] APP_ACCESS_PASSWORD belum diatur di environment variable server.');
     res.status(500).json({
@@ -223,27 +212,17 @@ app.post('/api/auth/login', (req: Request, res: Response) => {
   // Reset rate limiting on successful login
   resetFailedAttempts(ip);
 
-  // Generate cryptographically secure token
-  const token = crypto.randomBytes(32).toString('hex');
-  const now = Date.now();
-  const session: SessionRecord = {
-    token,
-    createdAt: now,
-    expiresAt: now + SESSION_DURATION_MS,
-    ip,
-  };
-  activeSessions.set(token, session);
-
-  // Set secure HttpOnly cookie
+  const session = createSessionToken();
+  const secureFlag = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   res.setHeader(
     'Set-Cookie',
-    `aicrative_session=${token}; Path=/; Max-Age=${SESSION_DURATION_MS / 1000}; HttpOnly; SameSite=Lax`
+    `aicrative_session=${session.token}; Path=/; Max-Age=${SESSION_DURATION_MS / 1000}; HttpOnly; SameSite=Lax${secureFlag}`
   );
 
   res.json({
     success: true,
     message: 'Autentikasi berhasil.',
-    token,
+    token: session.token,
     expiresAt: session.expiresAt,
   });
 });
@@ -256,25 +235,18 @@ app.get('/api/auth/session', (req: Request, res: Response) => {
     return;
   }
 
-  const session = activeSessions.get(token);
-  if (!session || session.expiresAt <= Date.now()) {
-    if (session) activeSessions.delete(token);
+  if (!isValidSessionToken(token)) {
     res.status(401).json({ authenticated: false });
     return;
   }
-
-  res.json({
-    authenticated: true,
-    expiresAt: session.expiresAt,
-  });
+  const payload = JSON.parse(Buffer.from(token.split('.')[0], 'base64url').toString('utf8'));
+  res.json({ authenticated: true, expiresAt: payload.exp });
 });
 
 // POST /api/auth/logout
 app.post('/api/auth/logout', (req: Request, res: Response) => {
   const token = extractToken(req);
-  if (token) {
-    activeSessions.delete(token);
-  }
+  // Stateless tokens expire automatically; clearing the browser cookie ends this browser session.
   res.setHeader('Set-Cookie', 'aicrative_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax');
   res.json({ success: true, message: 'Sesi berhasil diakhiri.' });
 });
@@ -440,6 +412,8 @@ app.get('/api/ai/status', requireSession, async (_req: Request, res: Response) =
 // VITE SPA & STATIC SERVING
 // -------------------------------------------------------------
 async function setupServer() {
+  if (process.env.VERCEL) return;
+
   const isProd = process.env.NODE_ENV === 'production';
 
   if (!isProd) {
@@ -461,5 +435,7 @@ async function setupServer() {
     console.log(`[AICRATIVE SERVER] Running at http://0.0.0.0:${PORT} (Mode: ${process.env.NODE_ENV || 'development'})`);
   });
 }
+
+export default app;
 
 setupServer();
