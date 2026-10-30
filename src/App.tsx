@@ -36,14 +36,9 @@ import {
 
 import { SceneData, StoryBible, ConnectionSettings, ConnectionStatus, ProjectData } from './types';
 import {
-  DEFAULT_MODEL,
-  AVAILABLE_MODELS,
   loginWithPassword,
   checkAuthSession,
   logoutSession,
-  testBackendConnection,
-  generateStoryWithBackend,
-  generateStoryLocalFallback,
   buildImagePrompt,
   buildVideoPrompt,
   buildMasterCharacterReferenceSheet,
@@ -52,6 +47,7 @@ import {
   saveProjectToStorage,
   deleteProjectFromStorage,
 } from './services/supabaseAicrative';
+import { generateLocalCreativeProject } from './engines';
 
 export default function App() {
   // Authentication & Gate State
@@ -65,10 +61,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'studio' | 'projects' | 'guide' | 'engine'>('studio');
 
   // Connection settings
-  const [settings, setSettings] = useState<ConnectionSettings>({
-    model: DEFAULT_MODEL,
-    mode: 'auto',
-  });
+  const [settings] = useState<ConnectionSettings>({ model: 'local-creative-engine', mode: 'local' });
 
   const [connStatus, setConnStatus] = useState<ConnectionStatus>({
     state: 'idle',
@@ -191,27 +184,13 @@ export default function App() {
     showToast('Sesi telah diakhiri.');
   };
 
-  // Test engine connectivity via server proxy
-  const handlePingEngine = async () => {
-    setConnStatus({ state: 'testing', message: 'Memverifikasi status AI Engine...' });
-    const res = await testBackendConnection(settings);
-    if (res.success) {
-      setConnStatus({
-        state: 'success',
-        message: 'Server proxy dan provider AI terhubung aktif.',
-        latencyMs: res.latencyMs,
-        lastResponse: res.rawResponse,
-        lastTestedAt: new Date(),
-      });
-    } else {
-      setConnStatus({
-        state: 'error',
-        message: res.message,
-        latencyMs: res.latencyMs,
-        lastResponse: res.rawResponse,
-        lastTestedAt: new Date(),
-      });
-    }
+  // Local Creative Engine runs in the browser; no provider connection is required.
+  const handlePingEngine = () => {
+    setConnStatus({
+      state: 'success',
+      message: 'Local Creative Engine siap. Semua prompt diproses di browser tanpa API AI eksternal.',
+      lastTestedAt: new Date(),
+    });
   };
 
   // Generation flow
@@ -230,104 +209,53 @@ export default function App() {
   const handleExecuteGeneration = async () => {
     setShowLanguageModal(false);
     setIsGenerating(true);
-    setGenerationStep('Menghubungi AI Engine...');
+    setGenerationStep('Local Creative Engine menyusun Character, Story, dan Scene...');
 
-    let bibleResult: StoryBible;
-    let scenesResult: SceneData[];
-
-    if (settings.mode !== 'local') {
-      try {
-        setGenerationStep('AI menyusun alur cerita & struktur adegan...');
-        const res = await generateStoryWithBackend(
-          storyIdea,
-          sceneCount,
-          effectiveStyle,
-          aspectRatio,
-          additionalRules,
-          dialogueLanguage,
-          settings
-        );
-        bibleResult = res.bible;
-        scenesResult = res.scenes;
-        setProjectTitle(res.bible.title || projectTitle);
-        showToast('Cerita berhasil diproduksi melalui Cloud AI Engine.');
-      } catch (err: any) {
-        console.warn('AI generation error:', err);
-        if (settings.mode === 'supabase') {
-          setIsGenerating(false);
-          setGenerationStep('');
-          showToast(`Mode Cloud AI gagal: ${err.message}`);
-          return;
-        }
-
-        // Automatic localbase fallback in Hybrid Mode
-        setGenerationStep('Beralih ke AICRATIVE Localbase Engine...');
-        const local = generateStoryLocalFallback(
-          storyIdea,
-          sceneCount,
-          effectiveStyle,
-          aspectRatio,
-          additionalRules,
-          dialogueLanguage
-        );
-        bibleResult = local.bible;
-        scenesResult = local.scenes;
-        setProjectTitle(local.bible.title || projectTitle);
-        showToast('Menggunakan Localbase Engine dengan kontinuitas penuh.');
-      }
-    } else {
-      setGenerationStep('Memproses cerita dengan Localbase Engine...');
-      const local = generateStoryLocalFallback(
-        storyIdea,
+    try {
+      const generated = generateLocalCreativeProject({
+        idea: storyIdea,
         sceneCount,
-        effectiveStyle,
+        visualStyle: effectiveStyle,
+        ratio: aspectRatio,
+        extra: additionalRules,
+        language: dialogueLanguage,
+      });
+      const bibleResult = generated.bible;
+      const finalScenes = generated.scenes;
+
+      setGenerationStep('Mengunci identitas karakter dan merakit prompt produksi...');
+      setProjectTitle(bibleResult.title || projectTitle);
+      setStoryBible(bibleResult);
+      setScenes(finalScenes);
+
+      const newProj: ProjectData = {
+        id: projectId,
+        title: bibleResult.title || projectTitle,
+        idea: storyIdea,
+        sceneCount,
+        visualStyle,
+        customStyle,
         aspectRatio,
         additionalRules,
-        dialogueLanguage
-      );
-      bibleResult = local.bible;
-      scenesResult = local.scenes;
-      setProjectTitle(local.bible.title || projectTitle);
-      showToast('Cerita berhasil disusun dari template lokal.');
+        dialogueLanguage,
+        bible: bibleResult,
+        scenes: finalScenes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      saveProjectToStorage(newProj);
+      setSavedProjects(loadProjectsFromStorage());
+      showToast('Character, Story, Scene, Image Prompt, dan Video Prompt berhasil dibuat secara lokal.');
+      setTimeout(() => {
+        document.getElementById('productionResults')?.scrollIntoView({ behavior: 'smooth' });
+      }, 250);
+    } catch (error) {
+      console.error('Local Creative Engine error:', error);
+      showToast('Generator lokal mengalami kendala. Periksa kembali input proyek.');
+    } finally {
+      setIsGenerating(false);
+      setGenerationStep('');
     }
-
-    setGenerationStep('Mengunci konsistensi karakter & prompt produksi...');
-
-    // Assemble final production prompts using the locked localbase templates
-    const finalScenes = scenesResult.map((s, idx) => ({
-      ...s,
-      image: buildImagePrompt(bibleResult, s, idx, effectiveStyle, aspectRatio),
-      video: buildVideoPrompt(bibleResult, s, idx, effectiveStyle, aspectRatio, dialogueLanguage),
-    }));
-
-    setStoryBible(bibleResult);
-    setScenes(finalScenes);
-    setIsGenerating(false);
-    setGenerationStep('');
-
-    // Auto save to projects
-    const newProj: ProjectData = {
-      id: projectId,
-      title: bibleResult.title || projectTitle,
-      idea: storyIdea,
-      sceneCount,
-      visualStyle,
-      customStyle,
-      aspectRatio,
-      additionalRules,
-      dialogueLanguage,
-      bible: bibleResult,
-      scenes: finalScenes,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveProjectToStorage(newProj);
-    setSavedProjects(loadProjectsFromStorage());
-
-    // Scroll to results
-    setTimeout(() => {
-      document.getElementById('productionResults')?.scrollIntoView({ behavior: 'smooth' });
-    }, 250);
   };
 
   const handleReapplyBible = () => {
@@ -1717,117 +1645,34 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================== TAB 4: AI ENGINE SETTINGS ==================== */}
+        {/* ==================== TAB 4: LOCAL CREATIVE ENGINE ==================== */}
         {activeTab === 'engine' && (
           <div className="space-y-5 max-w-3xl mx-auto">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight text-[#141619]">
-                Pengaturan AI Engine
-              </h1>
+              <h1 className="text-xl font-semibold tracking-tight text-[#141619]">Local Creative Engine</h1>
               <p className="text-xs text-[#73767c] mt-0.5">
-                Konfigurasi backend proxy dan mode eksekusi generator.
+                Mesin prompt berbasis aturan, preset, template, dan komposisi lokal. Tidak menggunakan API AI eksternal.
               </p>
             </div>
-
-            {/* Service Status Card */}
-            <div className="p-5 rounded-xl bg-white border border-[#e6e4dc]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${status.dotClass}`} />
-                    <h3 className="text-sm font-semibold text-[#141619]">
-                      Backend Status: {status.label}
-                    </h3>
+            <div className="p-5 rounded-xl bg-white border border-[#e6e4dc] space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <h3 className="text-sm font-semibold text-[#141619]">Engine siap digunakan</h3>
+              </div>
+              <p className="text-xs text-[#73767c] leading-relaxed">
+                Semua proses Character, Story, Scene, Image Prompt, dan Video Prompt berjalan langsung di browser. Tidak ada request generasi ke xKiro, Gemini, OpenAI, atau provider AI lainnya.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {['Character Identity & Lock','Story Bible & Story Arc','Scene Builder','Image Prompt Composer','Video Prompt, Camera & Sound'].map((item) => (
+                  <div key={item} className="rounded-lg border border-[#e6e4dc] bg-[#faf9f6] p-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{item}</span>
                   </div>
-                  <p className="text-xs text-[#73767c]">
-                    {connStatus.message}
-                  </p>
-                  {connStatus.latencyMs && (
-                    <span className="text-xs text-emerald-700 font-medium block">
-                      Waktu respon: {connStatus.latencyMs} ms
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handlePingEngine}
-                  disabled={connStatus.state === 'testing'}
-                  className="px-3.5 py-2 rounded-lg bg-[#181a1d] hover:bg-black text-white text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${connStatus.state === 'testing' ? 'animate-spin' : ''}`} />
-                  <span>Uji Koneksi</span>
-                </button>
+                ))}
               </div>
-            </div>
-
-            {/* Mode Selector */}
-            <div className="p-5 rounded-xl bg-white border border-[#e6e4dc] space-y-3.5">
-              <h3 className="text-sm font-semibold text-[#141619]">
-                Mode Eksekusi Generator
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div
-                  onClick={() => setSettings({ ...settings, mode: 'auto' })}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    settings.mode === 'auto'
-                      ? 'border-[#ff5a1f] bg-[#fff0e8]/40 ring-1 ring-[#ff5a1f]'
-                      : 'border-[#e6e4dc] bg-white hover:border-[#dcd9d0]'
-                  }`}
-                >
-                  <strong className="text-xs font-semibold block text-[#141619]">Otomatis (Hybrid)</strong>
-                  <p className="text-[11px] text-[#73767c] mt-1 leading-relaxed">
-                    Prioritaskan Cloud AI xKiro, otomatis fallback ke Localbase jika terjadi gangguan internet/kuota.
-                  </p>
-                </div>
-
-                <div
-                  onClick={() => setSettings({ ...settings, mode: 'supabase' })}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    settings.mode === 'supabase'
-                      ? 'border-[#ff5a1f] bg-[#fff0e8]/40 ring-1 ring-[#ff5a1f]'
-                      : 'border-[#e6e4dc] bg-white hover:border-[#dcd9d0]'
-                  }`}
-                >
-                  <strong className="text-xs font-semibold block text-[#141619]">Cloud AI Saja</strong>
-                  <p className="text-[11px] text-[#73767c] mt-1 leading-relaxed">
-                    Semua generasi wajib menggunakan backend Cloud AI. Menampilkan error jelas jika provider offline.
-                  </p>
-                </div>
-
-                <div
-                  onClick={() => setSettings({ ...settings, mode: 'local' })}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    settings.mode === 'local'
-                      ? 'border-[#ff5a1f] bg-[#fff0e8]/40 ring-1 ring-[#ff5a1f]'
-                      : 'border-[#e6e4dc] bg-white hover:border-[#dcd9d0]'
-                  }`}
-                >
-                  <strong className="text-xs font-semibold block text-[#141619]">Localbase Saja</strong>
-                  <p className="text-[11px] text-[#73767c] mt-1 leading-relaxed">
-                    Eksekusi instan 100% lokal berbasis template teruji tanpa panggilan internet ke provider.
-                  </p>
-                </div>
-              </div>
-
-              {/* Model Choice */}
-              <div className="pt-2">
-                <label className="text-xs font-medium text-[#141619] block mb-1">
-                  Model AI (Divalidasi Allowlist Server)
-                </label>
-                <select
-                  value={settings.model}
-                  onChange={(e) => setSettings({ ...settings, model: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-[#dcd9d0] text-xs bg-white focus:outline-hidden focus:border-[#ff5a1f]"
-                >
-                  {AVAILABLE_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <p className="text-[11px] text-[#8c8f95]">
+                Catatan: engine lokal menyusun hasil dari logika dan template terprogram. Engine ini tidak menjalankan model bahasa besar dan tidak membuat file gambar/video.
+              </p>
             </div>
           </div>
         )}
