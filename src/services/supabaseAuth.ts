@@ -47,19 +47,15 @@ async function authRequest(path: string, body?: unknown, method = 'POST', token?
   return data;
 }
 
-export async function signUp(email: string, password: string, displayName: string) {
-  const data = await authRequest('signup', { email, password, data: { display_name: displayName } });
-  if (data.access_token) saveSession(data as SupabaseSession);
-  return { session: data.access_token ? data as SupabaseSession : null, message: data.access_token ? 'Akun berhasil dibuat.' : 'Akun dibuat. Periksa email untuk verifikasi sebelum masuk.' };
-}
-export async function signIn(email: string, password: string): Promise<SupabaseSession> {
-  const data = await authRequest('token?grant_type=password', { email, password });
+async function signInAnonymously(): Promise<SupabaseSession> {
+  const data = await authRequest('signup', { data: { display_name: 'AICRATIVE Guest' } });
+  if (!data.access_token) throw new Error('Supabase belum mengaktifkan Anonymous Sign-Ins. Aktifkan di Authentication > Sign In / Providers > Anonymous.');
   saveSession(data as SupabaseSession);
   return data as SupabaseSession;
 }
 export async function getAccessToken(): Promise<string> {
   const session = readSession();
-  if (!session) throw new Error('Sesi berakhir. Silakan masuk kembali.');
+  if (!session) throw new Error('Sesi berakhir. Silakan muat ulang AICRATIVE.');
   if ((session.expires_at || 0) > Math.floor(Date.now() / 1000) + 60) return session.access_token;
   const refreshed = await authRequest('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
   saveSession(refreshed as SupabaseSession);
@@ -67,23 +63,16 @@ export async function getAccessToken(): Promise<string> {
 }
 export async function getCurrentUser(): Promise<SupabaseUser | null> {
   const session = readSession();
-  if (!session) return null;
+  if (!session) return (await signInAnonymously()).user;
   try {
     const token = await getAccessToken();
     const user = await authRequest('user', undefined, 'GET', token);
     return user as SupabaseUser;
   } catch {
     saveSession(null);
-    return null;
+    return (await signInAnonymously()).user;
   }
 }
 export async function signOut() {
-  const session = readSession();
-  try {
-    if (session) {
-      const token = await getAccessToken();
-      await authRequest('logout', undefined, 'POST', token);
-    }
-  } catch { /* local session is still cleared */ }
-  saveSession(null);
+  window.location.reload();
 }
