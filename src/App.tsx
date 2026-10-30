@@ -34,7 +34,7 @@ import {
   CheckCheck
 } from 'lucide-react';
 
-import { SceneData, StoryBible, ProjectData } from './types';
+import { SceneData, StoryBible, ProjectData, ConnectionStatus } from './types';
 import {
   buildImagePrompt,
   buildVideoPrompt,
