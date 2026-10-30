@@ -76,3 +76,16 @@ export async function getCurrentUser(): Promise<SupabaseUser | null> {
 export async function signOut() {
   window.location.reload();
 }
+
+/* Kept for backwards compatibility with the existing Studio component.
+   Shared-password users do not see the email registration screen. */
+export async function signUp(email: string, password: string, displayName: string) {
+  const data = await authRequest('signup', { email, password, data: { display_name: displayName } });
+  if (data.access_token) saveSession(data as SupabaseSession);
+  return { session: data.access_token ? data as SupabaseSession : null, message: 'Periksa email untuk verifikasi.' };
+}
+export async function signIn(email: string, password: string): Promise<SupabaseSession> {
+  const data = await authRequest('token?grant_type=password', { email, password });
+  saveSession(data as SupabaseSession);
+  return data as SupabaseSession;
+}
