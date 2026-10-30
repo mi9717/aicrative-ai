@@ -61,7 +61,6 @@ export default function App() {
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<'studio' | 'projects' | 'guide' | 'engine'>('studio');
 
-  // Connection settings
   const [connStatus, setConnStatus] = useState<ConnectionStatus>({
     state: 'idle',
     message: 'AICRATIVE Server Engine terhubung.',
@@ -1471,7 +1470,7 @@ export default function App() {
                   Koleksi Proyek
                 </h1>
                 <p className="text-xs text-[#73767c] mt-0.5">
-                  Proyek cerita yang Anda simpan di memori browser.
+                  Proyek cerita tersimpan aman di akun cloud Anda.
                 </p>
               </div>
 
