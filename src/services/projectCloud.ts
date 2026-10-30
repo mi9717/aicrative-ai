@@ -22,7 +22,8 @@ async function request(path: string, init: RequestInit = {}) {
     throw new Error(body.message || body.details || 'Gagal mengakses penyimpanan proyek.');
   }
   if (response.status === 204) return null;
-  return response.json();
+  const responseText = await response.text();
+  return responseText ? JSON.parse(responseText) : null;
 }
 
 export async function listCloudProjects(): Promise<ProjectData[]> {
