@@ -20,6 +20,9 @@ create table if not exists public.projects (
 create index if not exists projects_user_updated_idx
   on public.projects(user_id, updated_at desc);
 
+grant select, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.projects to authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.projects enable row level security;
 
