@@ -1,0 +1,6 @@
+{
+  "name": "AICRATIVE — AI Creative Production Studio",
+  "description": "Studio produksi kreatif AI terhubung Supabase dan xKiro untuk menyusun cerita, adegan, Story Bible, serta prompt gambar dan video yang konsisten.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

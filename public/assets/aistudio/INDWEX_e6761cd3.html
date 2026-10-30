@@ -1,0 +1,721 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AICRATIVE — AI Creative Production Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7f5f0;--paper:#fffefa;--ink:#191b18;--muted:#777970;--line:#e7e4dc;--orange:#ff5a27;--soft:#fff0e8;--dark:#202421}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif}
+button,input,textarea,select{font:inherit}button{cursor:pointer}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif}
+.hidden{display:none!important}
+.brand{font:700 22px 'Space Grotesk';letter-spacing:-1px}
+.brand span{color:var(--orange)}
+.btn{border:0;border-radius:9px;padding:12px 16px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.primary{background:var(--orange);color:white}.dark{background:var(--dark);color:white}
+.light{background:white;border:1px solid var(--line);color:var(--ink)}
+.small{padding:8px 11px;font-size:10px}
+.topbar{height:72px;padding:0 6%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);background:#fbf9f4}
+.navlinks{display:flex;gap:22px;font-size:12px;color:var(--muted)}
+.navlinks a{cursor:pointer}
+main{max-width:1450px;margin:auto;padding:42px 6% 75px}
+.hero{display:grid;grid-template-columns:1fr .85fr;gap:30px;align-items:center;margin-bottom:30px}
+.eyebrow{font-size:10px;letter-spacing:2px;font-weight:700;color:var(--orange);text-transform:uppercase}
+.hero h1{font-size:clamp(40px,5vw,64px);letter-spacing:-3px;line-height:1.03;margin:16px 0}
+.hero h1 em{font-style:normal;color:var(--orange)}
+.hero p{font-size:14px;color:var(--muted);line-height:1.8;max-width:580px}
+.art{height:255px;border-radius:22px;background:#e9e4d9;display:grid;place-items:center;position:relative;overflow:hidden}
+.orbit{position:absolute;width:260px;height:145px;border:1px solid #77736666;border-radius:50%;transform:rotate(-30deg)}
+.orbit.two{width:320px;height:185px;transform:rotate(35deg)}
+.sculpture{height:170px;width:140px;border-radius:48% 45% 35% 40%;background:linear-gradient(135deg,#ffbd8c,#ed6836 45%,#512c24);box-shadow:inset -18px -12px 25px #3e201c66,0 20px 30px #4d382322;transform:rotate(-15deg);z-index:1}
+.art-label{position:absolute;top:18px;left:20px;font-size:9px;letter-spacing:1.5px;font-weight:700}
+.art-caption{position:absolute;bottom:18px;left:20px;font-size:10px;line-height:1.7}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:18px;align-items:start}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
+.panel-head h2,.panel-head h3{font-size:17px;margin:0}
+.tag{font-size:9px;font-weight:700;letter-spacing:.6px;color:var(--orange);background:var(--soft);border-radius:6px;padding:7px 9px}
+.idea{width:100%;min-height:145px;padding:15px;border:1px solid #dedbd2;border-radius:12px;background:white;font-size:13px;line-height:1.8;resize:vertical}
+.hint{font-size:11px;color:var(--muted);line-height:1.7}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.chip{border:1px solid var(--line);background:white;border-radius:30px;padding:8px 11px;font-size:10px;color:#666}
+.chip:hover{border-color:var(--orange);color:var(--orange)}
+.idea-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+.settings{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.field label{font-size:11px;font-weight:700;display:block;margin-bottom:7px}
+.field input,.field select{width:100%;padding:11px;border:1px solid #dedbd2;border-radius:9px;background:white;font-size:12px}
+.bible-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bible-item{padding:13px;border:1px solid var(--line);border-radius:10px;background:white}
+.bible-item strong{display:block;font-size:10px;margin-bottom:7px}
+.bible-item textarea{width:100%;min-height:95px;border:1px solid var(--line);border-radius:7px;padding:9px;font-size:11px;line-height:1.7;resize:vertical}
+.note{background:#f2efe7;border-radius:9px;padding:12px;font-size:10px;line-height:1.7;color:#686b63;margin-top:12px}
+.side{position:sticky;top:15px}.side .panel{padding:17px}.side h3{font-size:15px}
+.step{display:flex;gap:10px;margin:16px 0}
+.step-icon{width:27px;height:27px;display:grid;place-items:center;background:var(--soft);color:var(--orange);border-radius:8px;flex-shrink:0;font-size:11px;font-weight:700}
+.step strong{font-size:11px;display:block;margin-bottom:4px}.step span{font-size:10px;color:var(--muted);line-height:1.5;display:block}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.stat{background:#f3f0e9;padding:13px;border-radius:9px}
+.stat strong{display:block;font:700 25px 'Space Grotesk'}.stat span{font-size:10px;color:var(--muted)}
+.results{margin-top:28px}
+.results-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:17px}
+.results-head h2{font-size:29px;letter-spacing:-1.5px;margin:7px 0}
+.results-head p{font-size:11px;color:var(--muted);line-height:1.7;margin:0}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.scene{border:1px solid var(--line);background:var(--paper);border-radius:15px;overflow:hidden;margin-bottom:14px}
+.scene-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.scene-num{width:36px;height:36px;border-radius:10px;background:var(--soft);color:var(--orange);display:grid;place-items:center;font:700 13px 'Space Grotesk';flex-shrink:0}
+.scene-head h3{font-size:14px;margin:0 0 5px}.scene-meta{font-size:10px;color:var(--muted)}
+.scene-body{padding:17px 18px}
+.scene-summary{font-size:11px;line-height:1.8;color:#666;margin-bottom:13px}
+.prompt{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:11px}
+.prompt-head{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#f1eee7;padding:9px 11px}
+.prompt-head strong{font-size:10px;letter-spacing:.6px}
+.prompt-head button{font-size:10px;font-weight:700;background:white;border:1px solid var(--line);border-radius:7px;padding:7px 9px}
+.prompt-text{padding:13px;font-size:10px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}
+.scene-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.scene-bottom span{font-size:10px;color:var(--muted)}
+footer{font-size:10px;color:var(--muted);line-height:1.7;margin-top:18px}
+.toast{position:fixed;right:20px;bottom:20px;background:var(--dark);color:white;padding:13px 17px;border-radius:9px;font-size:12px;z-index:50;box-shadow:0 10px 30px #0002}
+
+/* DIALOG LANGUAGE MODAL */
+.modal-backdrop{position:fixed;inset:0;background:#151713a8;display:flex;align-items:center;justify-content:center;padding:18px;z-index:40}
+.modal{width:min(100%,470px);background:var(--paper);border-radius:20px;padding:27px;box-shadow:0 25px 90px #0003}
+.modal h2{font-size:27px;letter-spacing:-1px;margin:10px 0}
+.modal p{font-size:12px;color:var(--muted);line-height:1.8}
+.language-options{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.language-option{border:1px solid var(--line);background:white;border-radius:13px;padding:17px 13px;text-align:left}
+.language-option.selected{border:2px solid var(--orange);background:var(--soft);padding:16px 12px}
+.language-option .flag{font-size:24px;display:block;margin-bottom:12px}
+.language-option strong{font-size:13px;display:block;margin-bottom:5px}
+.language-option span{font-size:10px;color:var(--muted);line-height:1.5;display:block}
+.modal-actions{display:flex;gap:9px}
+.modal-actions button{flex:1}
+@media(max-width:950px){.hero{grid-template-columns:1fr}.art{height:220px}.layout{grid-template-columns:1fr}.side{position:static;display:grid;grid-template-columns:1fr 1fr;gap:12px}.side .panel{margin:0}}
+@media(max-width:620px){.topbar{padding:0 5%;height:63px}.navlinks a{display:none}main{padding:30px 4% 55px}.hero h1{font-size:43px;letter-spacing:-2px}.panel{padding:16px}.settings,.bible-grid{grid-template-columns:1fr}.side{grid-template-columns:1fr}.results-head h2{font-size:25px}.actions{width:100%}.actions button{flex:1}.scene-head,.scene-body{padding:13px}.idea-footer .btn{width:100%}.modal{padding:21px}.language-options{gap:8px}.language-option{padding:13px 10px}.language-option.selected{padding:12px 9px}}
+
+/* AICRATIVE APP SHELL + WORKSPACE */
+.landing{min-height:100vh;background:var(--bg);display:flex;flex-direction:column}
+.landing-nav{height:76px;display:flex;align-items:center;justify-content:space-between;padding:0 7%;border-bottom:1px solid var(--line);background:#fbf9f4}
+.landing-main{width:min(1200px,88%);margin:auto;display:grid;grid-template-columns:1.05fr .95fr;gap:44px;align-items:center;padding:70px 0;flex:1}
+.landing-copy h1{font-size:clamp(44px,6vw,76px);letter-spacing:-4px;line-height:.99;margin:18px 0}
+.landing-copy h1 em{color:var(--orange);font-style:normal}
+.landing-copy p{font-size:15px;line-height:1.9;color:var(--muted);max-width:550px}
+.landing-visual{min-height:390px;border-radius:26px;background:#e9e4d9;position:relative;overflow:hidden;display:grid;place-items:center}
+.landing-visual .sculpture{width:180px;height:225px;filter:saturate(.9)}
+.landing-orbit{position:absolute;width:390px;height:220px;border:1px solid #77736666;border-radius:50%;transform:rotate(-27deg)}
+.landing-orbit.two{width:460px;height:280px;transform:rotate(30deg)}
+.landing-footer{padding:20px 7%;font-size:10px;color:var(--muted);border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.appnav{display:flex;gap:8px;align-items:center;padding:14px 6%;background:#f0ede6;border-bottom:1px solid var(--line);overflow-x:auto}
+.appnav button{border:1px solid transparent;background:transparent;color:#6f7169;border-radius:9px;padding:11px 13px;font-size:11px;font-weight:700;white-space:nowrap}
+.appnav button.active{background:white;border-color:var(--line);color:var(--ink);box-shadow:0 2px 8px #00000008}
+.appnav .nav-spacer{flex:1;min-width:10px}
+.workspace{max-width:1450px;margin:auto;padding:30px 6% 70px}
+.workspace-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap}
+.workspace-head h1{font-size:32px;letter-spacing:-1.5px;margin:6px 0}
+.workspace-head p{font-size:12px;line-height:1.7;color:var(--muted);margin:0;max-width:650px}
+.workspace-view{display:none}.workspace-view.active{display:block}
+.dash-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+.dash-hero{padding:28px;background:var(--dark);color:white;border-radius:18px;min-height:230px;position:relative;overflow:hidden}
+.dash-hero h2{font-size:30px;letter-spacing:-1.5px;line-height:1.1;max-width:480px;margin:12px 0}
+.dash-hero p{font-size:12px;color:#d2d5ce;line-height:1.8;max-width:500px}
+.dash-hero .orb{position:absolute;right:-45px;bottom:-90px;width:250px;height:250px;border:1px solid #ffffff30;border-radius:50%;box-shadow:0 0 0 30px #ffffff08,0 0 0 65px #ffffff06}
+.dash-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.dash-card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:17px;min-height:140px}
+.dash-card .ico{width:34px;height:34px;border-radius:10px;background:var(--soft);color:var(--orange);display:grid;place-items:center;font-size:16px;margin-bottom:14px}
+.dash-card strong{font-size:12px;display:block;margin-bottom:6px}.dash-card p{font-size:10px;line-height:1.7;color:var(--muted);margin:0 0 13px}
+.character-layout{display:grid;grid-template-columns: minmax(0,1.1fr) minmax(280px,.9fr);gap:16px;align-items:start}
+.char-list{display:grid;gap:9px}.char-item{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--line);border-radius:11px;background:white}
+.char-avatar{width:42px;height:42px;border-radius:12px;background:var(--soft);display:grid;place-items:center;color:var(--orange);font-weight:700;font-family:'Space Grotesk';flex-shrink:0}
+.char-item .char-info{flex:1;min-width:0}.char-item strong{display:block;font-size:12px}.char-item span{display:block;color:var(--muted);font-size:10px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.char-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.char-form .field.full{grid-column:1/-1}.char-form textarea,.char-form input,.char-form select,.api-form input,.api-form select{width:100%;padding:11px;border:1px solid #dedbd2;border-radius:9px;background:white;font-size:12px}
+.char-form textarea{min-height:85px;resize:vertical;line-height:1.6}.api-status{padding:12px;border-radius:10px;background:#f2efe7;font-size:11px;line-height:1.7;color:#65685f;margin-top:12px}.api-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.api-form .field.full{grid-column:1/-1}.api-key-wrap{display:flex;gap:8px}.api-key-wrap input{flex:1;min-width:0}
+.key-note{font-size:10px;color:var(--muted);line-height:1.7;margin-top:8px}.view-section{margin-top:18px}
+@media(max-width:850px){.landing-main{grid-template-columns:1fr;padding:45px 0}.landing-visual{min-height:280px}.dash-grid,.character-layout{grid-template-columns:1fr}.dash-cards{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.landing-nav{padding:0 5%;height:65px}.landing-main{width:90%;padding:38px 0}.landing-copy h1{font-size:46px;letter-spacing:-2.5px}.landing-visual{min-height:230px}.appnav{padding:10px 4%}.workspace{padding:25px 4% 50px}.workspace-head h1{font-size:28px}.dash-cards,.char-form,.api-form{grid-template-columns:1fr}.char-form .field.full,.api-form .field.full{grid-column:auto}.dash-hero h2{font-size:26px}}
+
+</style>
+</head>
+<body>
+<section class="landing" id="landingPage">
+ <header class="landing-nav"><div class="brand"><span style="display:inline-grid;place-items:center;width:27px;height:27px;border-radius:7px;background:#ff5a27;color:white;margin-right:7px">A</span>AICRATIVE<span>.</span></div><button class="btn primary" onclick="enterApp()">Start Creating ↗</button></header>
+ <div class="landing-main"><div class="landing-copy"><div class="eyebrow">AI CREATIVE PRODUCTION STUDIO</div><h1>From one idea<br>to a whole world.<br><em>Scene by scene.</em></h1><p>Susun cerita, kembangkan adegan, dan siapkan prompt gambar serta video dalam satu workspace.</p><div class="actions" style="margin-top:22px"><button class="btn primary" onclick="enterApp()">Start Creating ↗</button><span class="hint" style="align-self:center">Story · Scene · AI Prompts</span></div></div><div class="landing-visual"><div class="landing-orbit"></div><div class="landing-orbit two"></div><div class="sculpture"></div><div class="art-label">AICRATIVE / CREATIVE WORKSPACE</div><div class="art-caption">DEFINE THE WORLD.<br>KEEP THE DETAILS.</div></div></div>
+ <div class="landing-footer"><span>© AICRATIVE · AI Creative Production Studio</span><span>One idea. Consistent worlds. Production-ready prompts.</span></div>
+</section>
+<div id="appShell" class="hidden">
+<header class="topbar">
+  <div class="brand"><span style="display:inline-grid;place-items:center;width:27px;height:27px;border-radius:7px;background:#ff5a27;color:white;margin-right:7px">A</span>AICRATIVE<span>.</span></div>
+  <div class="navlinks"><a onclick="showView('dashboard')">Dashboard</a><a onclick="showView('story')">Story & Scene</a><a onclick="showView('prompts')">AI Prompt Generator</a></div>
+</header>
+<nav class="appnav"><button data-view="dashboard" class="active" onclick="showView('dashboard')">⌂ Dashboard</button><button data-view="story" onclick="showView('story')">▤ Story & Scene Studio</button><button data-view="prompts" onclick="showView('prompts')">✦ AI Prompt Generator</button><span class="nav-spacer"></span><button onclick="backToLanding()">← Landing Page</button></nav>
+<div class="workspace">
+<section id="view-dashboard" class="workspace-view active">
+ <div class="workspace-head"><div><div class="eyebrow">YOUR CREATIVE WORKSPACE</div><h1>Dashboard</h1><p>Kembangkan cerita, susun adegan, dan siapkan prompt produksi dari satu tempat.</p></div><button class="btn primary" onclick="showView('story')">＋ Mulai proyek cerita</button></div>
+ <div class="dash-grid"><div class="dash-hero"><div class="eyebrow" style="color:#ff9a78">AICRATIVE WORKSPACE</div><h2>Bangun dunia kreatif yang konsisten.</h2><p>Mulai dari ide cerita, susun scene, lalu hasilkan prompt gambar dan video yang siap digunakan di tool AI pilihanmu.</p><button class="btn primary" onclick="showView('story')">Mulai Story Studio ↗</button><div class="orb"></div></div><section class="panel"><div class="panel-head"><h2>Ringkasan workspace</h2><span class="tag">LIVE</span></div><div class="stats"><div class="stat"><strong id="dashProjectStatus">0</strong><span>Total scene</span></div><div class="stat"><strong id="dashSceneCount">0</strong><span>Scene dalam proyek</span></div></div><div class="note" id="dashStatus">Workspace siap. Mulai proyek cerita baru.</div></section></div>
+ <div class="dash-cards"><div class="dash-card"><div class="ico">▤</div><strong>Story & Scene Studio</strong><p>Ubah ide menjadi struktur cerita, dialog, dan rangkaian scene.</p><button class="btn light small" onclick="showView('story')">Buat cerita →</button></div><div class="dash-card"><div class="ico">✦</div><strong>Pengaturan AI Engine</strong><p>Atur backend Supabase yang memanggil xKiro dengan aman. Struktur prompt inti tetap dikendalikan oleh AICRATIVE.</p><button class="btn light small" onclick="showView('prompts')">Pengaturan xKiro →</button></div></div>
+</section>
+<section id="view-story" class="workspace-view">
+ <div class="workspace-head"><div><div class="eyebrow">STORY DEVELOPMENT</div><h1>Story & Scene Studio</h1><p>Tulis ide cerita, atur jumlah scene, lalu susun Story Bible, dialog, image prompt, dan video prompt.</p></div></div>
+ <div id="storyWorkspaceMount"></div>
+</section>
+<section id="view-prompts" class="workspace-view">
+ <div class="workspace-head"><div><div class="eyebrow">GENERATION ENGINE</div><h1>Pengaturan AI Engine</h1><p>Supabase Edge Function memanggil xKiro untuk mengembangkan Story Bible dan isi scene. AICRATIVE tetap menyusun Image Prompt dan Video Prompt dengan struktur produksi yang terkunci.</p></div><span class="tag">SUPABASE + XKIRO</span></div>
+ <div class="layout" style="grid-template-columns:minmax(0,1fr) 270px"><section class="panel"><div class="panel-head"><h2>Koneksi Supabase → xKiro</h2><span class="tag">OPTIONAL</span></div><div class="api-form"><div class="field full"><label>Backend AI</label><input value="Supabase Edge Function → xKiro" readonly></div><div class="field"><label>Model</label><select id="openaiModel"><option value="qwen/qwen3.7-plus:free">Qwen3.7 Plus (Free)</option><option value="qwen/qwen3.7-max:free">Qwen3.7 Max (Free)</option><option value="qwen/qwen3.8-max:free">Qwen3.8 Max (Free)</option></select></div><div class="field"><label>Mode generator</label><select id="generationMode"><option value="auto">Otomatis (AI + fallback lokal)</option><option value="local">Template lokal saja</option><option value="openai">AI backend saja</option></select></div></div><div class="actions" style="margin-top:14px"><button class="btn primary" onclick="saveOpenAISettings()">Simpan pengaturan sesi</button><button class="btn dark" onclick="testOpenAIConnection()">Tes koneksi API</button></div><div class="api-status" id="apiStatus">Backend Supabase siap diuji. Secret xKiro disimpan di server, bukan di browser.</div><p class="key-note">AICRATIVE mengirim permintaan melalui Supabase Edge Function. API key rahasia xKiro tidak perlu ditempel di sini karena disimpan sebagai secret XKIRO_API_KEY di Supabase. Model gratis tetap mengikuti kuota bersama xKiro.</p></section><aside class="panel"><h3>Alur generator</h3><div class="step"><div class="step-icon">01</div><div><strong>Input cerita</strong><span>Tulis ide dan pilih bahasa dialog.</span></div></div><div class="step"><div class="step-icon">02</div><div><strong>xKiro sebagai otak kreatif</strong><span>xKiro mengembangkan cerita dan detail scene, bukan mengganti struktur prompt inti.</span></div></div><div class="step"><div class="step-icon">03</div><div><strong>AICRATIVE mengunci struktur</strong><span>Template lokal selalu menyusun continuity, Camera Direction, Sound Design, dan dialog ke dalam prompt akhir.</span></div></div></aside></div>
+</section>
+</div>
+<main id="legacyMain" class="hidden">
+  <section class="hero">
+    <div>
+      <div class="eyebrow">AI Creative Production Studio</div>
+      <h1>One idea.<br>A whole world.<br><em>Consistent scenes.</em></h1>
+      <p>Ceritakan ide dengan bahasa biasa. AICRATIVE menyusun fondasi dunia, aturan karakter, dialog, dan prompt terpisah untuk setiap scene.</p>
+    </div>
+    <div class="art"><div class="orbit"></div><div class="orbit two"></div><div class="sculpture"></div><div class="art-label">AICRATIVE / STORY SYSTEM</div><div class="art-caption">DEFINE THE WORLD.<br>KEEP THE DETAILS.</div></div>
+  </section>
+
+  <div class="layout">
+    <div>
+      <section class="panel" id="idea">
+        <div class="panel-head"><h2 style="font-size:18px;margin:0">Ceritakan ide kamu</h2><span class="tag">STEP 01</span></div>
+        <textarea id="storyIdea" class="idea" placeholder="Contoh: Saya ingin membuat cerita dunia Murim tentang seorang murid sekte yang lemah, menemukan kitab bela diri kuno, lalu berkembang menjadi pendekar kuat dan menghadapi konflik antar-sekte."></textarea>
+        <div class="chips">
+          <button class="chip" onclick="example('murim')">⚔ Dunia Murim</button>
+          <button class="chip" onclick="example('fantasi')">🐉 Dongeng fantasi</button>
+          <button class="chip" onclick="example('edukasi')">📚 Animasi edukasi</button>
+          <button class="chip" onclick="example('sejarah')">🏛 Cerita sejarah</button>
+        </div>
+        <div class="idea-footer"><span class="hint">Tidak perlu mengisi banyak formulir. Cukup tulis ide, tokoh, atau konflik yang ingin dibuat.</span><button class="btn primary" onclick="askLanguage()">✦ Susun Cerita & Scene</button></div>
+      </section>
+
+      <section class="panel" id="settingsPanel">
+        <div class="panel-head"><h2 style="font-size:17px;margin:0">Pengaturan hasil</h2><span class="tag">STEP 02</span></div>
+        <div class="settings">
+          <div class="field"><label>Jumlah scene</label><select id="count"><option value="4">4 — Pendek</option><option value="6">6 — Ringkas</option><option value="8" selected>8 — Standar</option><option value="12">12 — Panjang</option></select></div>
+          <div class="field">
+            <label for="style">Gaya visual</label>
+            <select id="style">
+              <option value="Stylized 3D animation">Stylized 3D animation</option>
+              <option value="3D feature animation cinematic">3D feature animation cinematic</option>
+              <option value="Photorealistic cinematic">Photorealistic cinematic</option>
+              <option value="Anime cinematic">Anime cinematic</option>
+              <option value="2D illustrated animation">2D illustrated animation</option>
+              <option value="Documentary realism">Documentary realism</option>
+              <option value="Other">Other</option>
+            </select>
+            <div id="customStyleWrap" class="hidden" style="margin-top:10px">
+              <label for="customStyle">Gaya visual kustom</label>
+              <textarea id="customStyle" rows="3" style="width:100%;padding:11px;border:1px solid #dedbd2;border-radius:9px;background:white;font-size:12px;line-height:1.7;resize:vertical" placeholder="Tuliskan gaya visual yang kamu inginkan..."></textarea>
+              <div class="hint" style="margin-top:6px">Gaya ini akan diterapkan pada semua image prompt dan video prompt.</div>
+            </div>
+            <div id="customStyleError" class="hidden" style="font-size:11px;color:#c0392b;margin-top:6px">Isi gaya visual kustom terlebih dahulu.</div>
+          </div>
+          <div class="field"><label>Rasio gambar</label><select id="ratio"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option><option>21:9</option></select></div>
+        </div>
+        <div class="field" style="margin-top:14px"><label>Aturan tambahan (opsional)</label><input id="extra" placeholder="Contoh: dunia Tiongkok kuno, tanpa teknologi modern, suasana epik"></div>
+      </section>
+
+      <section class="panel hidden" id="bible">
+        <div class="panel-head"><h2 style="font-size:17px;margin:0">Story Bible & Consistency Lock</h2><span class="tag">ACUAN BERSAMA</span></div>
+        <p class="hint">Acuan ini digunakan bersama oleh semua scene. Kamu bisa mengedit detailnya sebelum menyalin prompt.</p>
+        <div class="bible-grid">
+          <div class="bible-item"><strong>DUNIA CERITA</strong><textarea id="world"></textarea></div>
+          <div class="bible-item"><strong>KARAKTER UTAMA</strong><textarea id="character"></textarea></div>
+          <div class="bible-item"><strong>CHARACTER CONSISTENCY LOCK</strong><textarea id="characterLock" placeholder="Kunci wajah, rambut, warna kulit, proporsi tubuh, kostum, aksesori, dan ciri khas karakter."></textarea><div class="hint" style="margin-top:6px">Detail ini disisipkan ke semua image dan video prompt.</div></div>
+          <div class="bible-item"><strong>IDENTITAS VISUAL</strong><textarea id="visual"></textarea></div>
+          <div class="bible-item"><strong>ATURAN KONSISTENSI</strong><textarea id="rules"></textarea></div>
+        </div>
+        <div class="note">Workflow terbaik: buat satu gambar referensi karakter, lalu gunakan gambar yang sama sebagai reference image di setiap scene. Prompt teks membantu mengurangi perbedaan, tetapi tidak menjamin hasil identik.</div>
+        <div class="actions" style="margin-top:12px"><button class="btn light small" onclick="copyCharacterReferencePrompt()">⧉ Salin Character Reference Prompt</button><button class="btn dark small" onclick="refreshPrompts()">↻ Terapkan Bible ke semua prompt</button></div>
+        <div class="hint" style="margin-top:9px">Character Reference Prompt membuat lembar referensi karakter dari detail Story Bible, untuk dipakai berulang sebagai acuan visual.</div>
+      </section>
+
+      <section class="results hidden" id="scenes">
+        <div class="results-head">
+          <div><div class="eyebrow">Production-ready output</div><h2>Scene & Prompt Studio</h2><p>Dialog, Camera Direction, dan Sound Design otomatis menyatu di dalam video prompt. Arahan kamera dan audio menyesuaikan aksi scene dan gaya visual, termasuk gaya Other.</p></div>
+          <div class="actions"><button class="btn light small" onclick="copyAll('image')">Copy Semua Image</button><button class="btn dark small" onclick="copyAll('video')">Copy Semua Video + Dialog</button><button class="btn light small" onclick="downloadAllScenes()">Export Semua Scene .txt ↓</button></div>
+        </div>
+        <div id="sceneList" class="empty">Belum ada scene. Masukkan ide cerita lalu klik Susun Cerita & Scene.</div>
+        <footer>Generator ini dapat memakai template lokal atau OpenAI API sesuai pengaturan. Dialog, Camera Direction, dan Sound Design otomatis disertakan langsung di setiap video prompt, sehingga tidak perlu disalin dan ditempel secara terpisah.</footer>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="panel">
+        <h3>Alur kerja sederhana</h3>
+        <div class="step"><div class="step-icon">01</div><div><strong>Tulis ide cerita</strong><span>Gunakan bahasa sendiri, tidak perlu formulir panjang.</span></div></div>
+        <div class="step"><div class="step-icon">02</div><div><strong>Pilih bahasa dialog</strong><span>Bahasa Indonesia atau Bahasa Inggris sebelum membuat hasil.</span></div></div>
+        <div class="step"><div class="step-icon">03</div><div><strong>Salin prompt per scene</strong><span>Dialog, image, dan video memiliki tombol salin masing-masing.</span></div></div>
+      </section>
+      <section class="panel">
+        <h3>Ringkasan produksi</h3>
+        <div class="stats"><div class="stat"><strong id="sceneStat">0</strong><span>Scenes</span></div><div class="stat"><strong id="promptStat">0</strong><span>Prompts</span></div></div>
+        <div class="note" id="status">Belum ada cerita. Mulai dengan menulis ide kamu.</div>
+      </section>
+      <section class="panel">
+        <h3>Tool eksternal</h3>
+        <div class="step"><div class="step-icon">▧</div><div><strong>Image generation</strong><span>Salin prompt image ke ChatGPT atau Leonardo AI.</span></div></div>
+        <div class="step"><div class="step-icon">▷</div><div><strong>Video generation</strong><span>Salin prompt video ke Google Flow atau tool pilihanmu.</span></div></div>
+      </section>
+    </aside>
+  </div>
+</main>
+</div>
+
+<!-- LANGUAGE CHOICE MODAL -->
+<div id="languageModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="eyebrow">Satu langkah sebelum generate</div>
+    <h2 id="modalTitle">Dialog ingin menggunakan bahasa apa?</h2>
+    <p>Pilih bahasa dialog karakter. Pilihan ini berlaku untuk seluruh scene dalam cerita yang akan dibuat.</p>
+    <div class="language-options">
+      <button class="language-option selected" id="langID" onclick="selectLanguage('id')">
+        <span class="flag">🇮🇩</span><strong>Bahasa Indonesia</strong><span>Dialog dan percakapan dalam bahasa Indonesia.</span>
+      </button>
+      <button class="language-option" id="langEN" onclick="selectLanguage('en')">
+        <span class="flag">🇬🇧</span><strong>English</strong><span>Character dialogue and conversations in English.</span>
+      </button>
+    </div>
+    <div class="note" id="languageNote">Bahasa dialog: Bahasa Indonesia. Prompt teknis image dan video tetap menggunakan bahasa Inggris agar mudah dipakai di berbagai tool AI.</div>
+    <div class="modal-actions">
+      <button class="btn light" onclick="closeLanguageModal()">Batal</button>
+      <button class="btn primary" onclick="confirmGenerate()">Konfirmasi & Generate ↗</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+const examples={
+ murim:"Saya ingin membuat cerita dunia Murim tentang seorang murid sekte yang dianggap lemah. Ia menemukan kitab bela diri kuno yang menyimpan teknik terlarang, lalu berkembang menjadi pendekar kuat dan menghadapi konflik antar-sekte. Buat petualangan bela diri epik dengan karakter utama yang konsisten.",
+ fantasi:"Saya ingin membuat dongeng fantasi 3D tentang seorang anak pemberani yang berteman dengan naga kecil penjaga hutan. Mereka harus menyelamatkan desa dari kabut misterius. Cerita hangat, lucu, dan penuh petualangan.",
+ edukasi:"Saya ingin membuat animasi edukasi anak tentang pentingnya menjaga kebersihan gigi. Gunakan karakter anak yang sama di semua scene, penjelasan sederhana, visual ceria, dan akhir yang memberi pesan positif.",
+ sejarah:"Saya ingin membuat film animasi sejarah tentang perjalanan seorang utusan kerajaan melintasi pulau-pulau Nusantara. Tampilkan lingkungan, pakaian, dan properti yang sesuai latar sejarah."
+};
+let scenesData=[],ideaText="",titleText="",dialogLanguage="id",pendingIdea="";
+function example(key){document.getElementById("storyIdea").value=examples[key]}
+function notify(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.remove("hidden");clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.add("hidden"),2400)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+function getSelectedVisualStyle(){
+  const selected=document.getElementById("style").value;
+  if(selected==="Other") return document.getElementById("customStyle").value.trim();
+  return selected;
+}
+function validateVisualStyle(){
+  const isOther=document.getElementById("style").value==="Other";
+  const custom=document.getElementById("customStyle").value.trim();
+  document.getElementById("customStyleWrap").classList.toggle("hidden",!isOther);
+  const invalid=isOther&&!custom;
+  document.getElementById("customStyleError").classList.toggle("hidden",!invalid);
+  return !invalid;
+}
+document.getElementById("style").addEventListener("change",()=>{
+  const isOther=document.getElementById("style").value==="Other";
+  document.getElementById("customStyleWrap").classList.toggle("hidden",!isOther);
+  if(!isOther) document.getElementById("customStyleError").classList.add("hidden");
+});
+document.getElementById("customStyle").addEventListener("input",()=>{
+  if(document.getElementById("customStyle").value.trim()){
+    document.getElementById("customStyleError").classList.add("hidden");
+  }
+});
+
+function askLanguage(){
+ pendingIdea=document.getElementById("storyIdea").value.trim();
+ if(!pendingIdea){document.getElementById("storyIdea").focus();notify("Tulis ide cerita terlebih dahulu.");return}
+  if(!validateVisualStyle()){
+    document.getElementById("customStyle").focus();
+    notify("Isi gaya visual kustom terlebih dahulu.");
+    return;
+  }
+ document.getElementById("languageModal").classList.remove("hidden");
+}
+function closeLanguageModal(){document.getElementById("languageModal").classList.add("hidden")}
+function selectLanguage(lang){
+ dialogLanguage=lang;
+ document.getElementById("langID").classList.toggle("selected",lang==="id");
+ document.getElementById("langEN").classList.toggle("selected",lang==="en");
+ document.getElementById("languageNote").textContent=lang==="id"
+ ? "Bahasa dialog: Bahasa Indonesia. Prompt teknis image dan video tetap menggunakan bahasa Inggris agar mudah dipakai di berbagai tool AI."
+ : "Dialogue language: English. Technical image and video prompts will remain in English for compatibility with AI tools.";
+}
+async function confirmGenerate(){
+ closeLanguageModal();
+ const mode=document.getElementById('generationMode')?.value||'auto';
+ if(mode!=='local'){const ok=await generateStoryWithOpenAI(pendingIdea);if(ok)return;if(mode==='openai'){notify('AI backend gagal. Periksa status koneksi di Pengaturan AI.');showView('prompts');return}notify('AI backend gagal; memakai generator template lokal.');}
+ generateStory(pendingIdea);updateDashboardStats();
+}
+
+function infer(idea){
+ const x=idea.toLowerCase();
+ if(/murim|sekte|bela diri|pendekar|kung fu|kitab/.test(x))return{
+ world:"Dunia Murim bernuansa Tiongkok kuno: perguruan bela diri, sekte yang bersaing, desa tradisional, pegunungan berkabut, ruang latihan, dan tempat rahasia. Tidak ada benda modern kecuali diminta.",
+ character:"Murid sekte muda yang awalnya diremehkan, tetapi memiliki tekad kuat dan berkembang melalui latihan atau penemuan penting. Wajah, rambut, usia tampak, proporsi tubuh, kostum dasar, dan aksesori harus ditetapkan dari satu referensi visual yang sama.",
+ visual:"Arsitektur kayu tradisional, atap melengkung, tangga batu, pegunungan berkabut, jubah bela diri, kain bertekstur, palet warna alami, dan pencahayaan sinematik.",
+ rules:"Pertahankan wajah, rambut, usia tampak, proporsi tubuh, kostum dasar, palet warna, dan aksesori. Jaga logika dunia Murim, lokasi, waktu, properti, serta arah gerak antar-scene."
+ };
+ if(/sejarah|kerajaan|nusantara|pahlawan|kolonial/.test(x))return{
+ world:"Dunia berlatar sejarah sesuai periode dan lokasi yang disebut pengguna. Arsitektur, pakaian, alat, transportasi, dan lingkungan harus sesuai periode. Detail sejarah spesifik perlu diverifikasi jika akurasi faktual penting.",
+ character:"Tokoh utama mengikuti ide pengguna. Kunci wajah, rambut, usia tampak, proporsi, kostum sesuai periode, dan properti khas dengan referensi yang sama.",
+ visual:"Sinematik dengan tekstur material sesuai periode, lingkungan berlapis, pencahayaan natural, dan komposisi yang mendukung cerita.",
+ rules:"Jaga identitas wajah, rambut, proporsi, kostum, aksesori, serta properti penting. Hindari anakronisme dan perubahan detail tanpa alasan cerita."
+ };
+ if(/edukasi|anak|belajar|sekolah|gigi|kebersihan/.test(x))return{
+ world:"Dunia edukasi yang ramah anak. Lingkungan dan aksi dibuat jelas, mudah dipahami, dan mendukung pesan pembelajaran.",
+ character:"Karakter utama yang ramah dan mudah dikenali. Tetapkan wajah, rambut, warna pakaian, proporsi, dan ciri khas yang diulang di semua scene.",
+ visual:"Animasi 3D stylized yang cerah, ekspresi terbaca, pencahayaan lembut, bentuk sederhana, dan warna harmonis.",
+ rules:"Jaga desain karakter, warna pakaian, ukuran relatif, dan gaya visual. Setiap scene menyampaikan satu aksi atau informasi utama."
+ };
+ if(/naga|fantasi|sihir|dongeng|monster|peri/.test(x))return{
+ world:"Dunia fantasi dengan lingkungan, makhluk, dan aturan magis yang konsisten. Elemen baru harus mengikuti logika dunia yang sama.",
+ character:"Protagonis dan makhluk pendamping memiliki siluet, warna, ciri wajah, kostum, dan aksesori yang mudah dikenali.",
+ visual:"Animasi 3D sinematik, lingkungan berlapis, pencahayaan atmosferik, palet warna terarah, dan detail koheren.",
+ rules:"Pertahankan desain karakter, skala antar-karakter, warna, properti, dan aturan magis. Hindari perubahan desain mendadak."
+ };
+ return{
+ world:"Bangun dunia sesuai ide pengguna. Jaga konsistensi lokasi, era, aturan lingkungan, properti, dan atmosfer dari satu scene ke scene berikutnya.",
+ character:"Tokoh utama mengikuti deskripsi pengguna. Jika penampilan belum ditentukan, detail spesifik perlu ditetapkan menggunakan referensi visual sebelum produksi.",
+ visual:"Ikuti gaya visual yang dipilih, dengan pencahayaan sinematik, focal point jelas, komposisi terarah, dan lingkungan koheren.",
+ rules:"Pertahankan identitas wajah, rambut, proporsi, pakaian, aksesori, palet warna, properti penting, serta kontinuitas lokasi dan waktu."
+ };
+}
+function titleFrom(idea){
+ let t=idea.replace(/^(saya ingin membuat|saya mau membuat|buatkan|buat|tolong buatkan)\s*/i,"").split(/[.!?\n]/)[0].trim();
+ return t.length>55?t.slice(0,52).trim()+"...":t||"Cerita Baru";
+}
+function sceneDefs(idea,n){
+ const x=idea.toLowerCase();let arr;
+ if(/murim|sekte|bela diri|pendekar|kung fu|kitab/.test(x))arr=[
+ ["Murid yang Diremehkan","Perkenalkan tokoh utama, kehidupan di sekte, dan alasan ia dianggap lemah."],
+ ["Ujian Perguruan","Tokoh utama menghadapi ujian atau konflik yang memperlihatkan kelemahannya."],
+ ["Rahasia Tempat Terlarang","Tokoh menemukan petunjuk atau kitab kuno di tempat tersembunyi."],
+ ["Awal Kebangkitan","Tokoh mulai mempelajari teknik baru dengan risiko dan kesulitan."],
+ ["Kekuatan Terungkap","Latihan mulai membuahkan hasil dan menarik perhatian orang lain."],
+ ["Ancaman Antar-Sekte","Konflik meluas dan tokoh harus melindungi sesuatu yang penting."],
+ ["Pertarungan Penentu","Tokoh menghadapi lawan yang menguji kemampuan dan tekadnya."],
+ ["Jalan Seorang Pendekar","Tunjukkan perkembangan tokoh dan awal perjalanan baru."]
+ ];
+ else if(/edukasi|anak|gigi|kebersihan|sekolah|belajar/.test(x))arr=[
+ ["Kenalan dengan Tokoh","Perkenalkan karakter dan situasi sehari-hari."],["Masalah Muncul","Tunjukkan masalah sederhana yang perlu dipahami."],["Mencari Jawaban","Tokoh mencari tahu penyebab masalah."],["Belajar Langkah Pertama","Kenalkan tindakan benar melalui contoh visual."],["Mencoba Bersama","Tokoh yang sama mempraktikkan langkah tersebut."],["Memperbaiki Kesalahan","Tunjukkan koreksi dengan cara ramah."],["Kebiasaan Baik","Tokoh menerapkan pengetahuan dalam rutinitas."],["Kesimpulan Positif","Ulangi pesan utama dengan akhir menyenangkan."]
+ ];
+ else arr=[
+ ["Dunia Cerita","Perkenalkan dunia, suasana, dan tokoh utama."],["Pemicu Perjalanan","Kejadian penting memunculkan tujuan baru."],["Langkah Pertama","Tokoh bertindak dan menghadapi hambatan awal."],["Petunjuk Penting","Tokoh menemukan informasi atau kemampuan baru."],["Konflik Membesar","Risiko meningkat dan hubungan antar-tokoh diuji."],["Titik Terendah","Tokoh menghadapi kegagalan atau pilihan sulit."],["Konfrontasi Utama","Tokoh mengambil tindakan menghadapi konflik."],["Dampak dan Awal Baru","Tunjukkan hasil perjalanan dan perubahan tokoh."]
+ ];
+ while(arr.length<n)arr.push(["Perkembangan Cerita","Lanjutkan konflik dan perkembangan karakter secara logis, dengan kontinuitas dari scene sebelumnya."]);
+ return arr.slice(0,n);
+}
+function locationFor(i,idea){
+ const x=idea.toLowerCase();
+ if(/murim|sekte|bela diri|pendekar|kung fu|kitab/.test(x))return ["Halaman sekte di pegunungan","Lapangan latihan bela diri","Gua tersembunyi berukir batu","Ruang latihan bercahaya lentera","Arena latihan perguruan","Jalur gunung dekat sekte rival","Halaman batu untuk pertarungan","Punggung gunung saat fajar"][i%8];
+ if(/anak|edukasi|gigi|kebersihan|sekolah|belajar/.test(x))return ["Rumah yang cerah","Lingkungan sekolah atau rumah","Area penemuan sederhana","Sudut belajar yang ramah","Tempat praktik","Area demonstrasi","Rutinitas sehari-hari","Lingkungan akhir yang ceria"][i%8];
+ return ["Lokasi pembuka cerita","Tempat konflik dimulai","Lokasi terkait misteri utama","Tempat penemuan atau latihan","Lingkungan saat risiko meningkat","Tempat tokoh menghadapi tantangan","Lokasi konfrontasi utama","Lokasi penutup cerita"][i%8];
+}
+function actionFor(i,s,idea){
+ const x=idea.toLowerCase();
+ if(/murim|sekte|bela diri|pendekar|kung fu|kitab/.test(x))return [
+ "Perlihatkan murid bela diri muda di lingkungan sekte tradisional. Tampilkan statusnya yang rendah, ekspresi tekad, dan lapangan latihan.",
+ "Tokoh utama menghadapi ujian perguruan atau konfrontasi. Tampilkan tantangan dengan jelas dan pertahankan wajah, rambut, serta kostum dasarnya.",
+ "Tokoh utama menemukan kitab bela diri kuno atau petunjuk misterius di lokasi terpencil. Penemuan terasa penting dan sesuai dunia cerita.",
+ "Tokoh utama mempelajari dan berlatih teknik kuno. Tampilkan gerakan terkontrol, fokus, serta usaha fisik yang terlihat.",
+ "Tokoh memperlihatkan peningkatan kemampuan dalam latihan. Pertahankan identitas dan kostum sambil menunjukkan kepercayaan diri.",
+ "Lawan atau sekte rival muncul dan meningkatkan konflik. Atur posisi karakter dan lingkungan agar mudah dibaca.",
+ "Tokoh menghadapi pertarungan penentu dengan koreografi yang jelas, gerakan terarah, dan proporsi tubuh konsisten.",
+ "Tokoh berdiri setelah konflik, berubah karena perjalanannya tetapi tetap memiliki identitas visual yang sama. Akhiri dengan suasana dunia bela diri yang lebih luas."
+ ][i%8];
+ if(/edukasi|anak|gigi|kebersihan|sekolah|belajar/.test(x))return [
+ "Perkenalkan tokoh utama dalam lingkungan yang akrab dan ramah.","Tunjukkan masalah sehari-hari yang perlu diselesaikan.","Tokoh menemukan petunjuk dan bertanya tentang masalah.","Tampilkan langkah pertama yang benar secara visual.","Tokoh yang sama mempraktikkan tindakan yang bermanfaat.","Perlihatkan kesalahan kecil dan koreksi yang ramah.","Tokoh menerapkan kebiasaan baik secara mandiri.","Akhiri dengan hasil positif dan pesan edukatif."
+ ][i%8];
+ return s[1]+" Interpretasikan ide pengguna dengan setia: "+idea+". Tampilkan satu aksi utama yang jelas dan ekspresi karakter yang terbaca.";
+}
+
+/* Draft dialog by scene. The selected language controls every scene. */
+function dialogueFor(i,idea){
+ const x=idea.toLowerCase();
+ let id,en;
+ if(/murim|sekte|bela diri|pendekar|kung fu|kitab/.test(x)){
+  id=[
+   "Murid: \"Aku mungkin yang terlemah di sini, tetapi aku tidak akan menyerah.\"",
+   "Murid: \"Suatu hari nanti, aku akan membuktikan kemampuanku.\"",
+   "Murid: \"Kitab apa ini? Mengapa disembunyikan di tempat seperti ini?\"",
+   "Murid: \"Aku harus menguasai teknik ini, selangkah demi selangkah.\"",
+   "Murid: \"Sekarang aku mengerti. Kekuatan bukan hanya soal tenaga.\"",
+   "Lawan: \"Kau seharusnya tidak ikut campur dalam urusan sekte kami!\"",
+   "Murid: \"Aku tidak akan mundur. Pertarungan ini harus berakhir sekarang!\"",
+   "Murid: \"Perjalananku baru dimulai. Masih banyak yang harus kupelajari.\""
+  ];
+  en=[
+   "Disciple: \"I may be the weakest here, but I will not give up.\"",
+   "Disciple: \"One day, I will prove what I am capable of.\"",
+   "Disciple: \"What is this manual? Why was it hidden here?\"",
+   "Disciple: \"I must master this technique, one step at a time.\"",
+   "Disciple: \"Now I understand. Strength is not just about power.\"",
+   "Rival: \"You should never have interfered with our sect!\"",
+   "Disciple: \"I will not back down. This fight ends now!\"",
+   "Disciple: \"My journey has only begun. There is still so much to learn.\""
+  ];
+ }else if(/edukasi|anak|gigi|kebersihan|sekolah|belajar/.test(x)){
+  id=[
+   "Anak: \"Hari ini aku ingin belajar sesuatu yang baru!\"",
+   "Anak: \"Oh, sepertinya ada sesuatu yang harus aku perbaiki.\"",
+   "Anak: \"Mengapa hal ini bisa terjadi? Aku ingin tahu jawabannya.\"",
+   "Pembimbing: \"Mari kita lakukan langkah pertama dengan benar.\"",
+   "Anak: \"Sekarang giliranku mencoba!\"",
+   "Pembimbing: \"Tidak apa-apa, kita coba lagi dengan cara yang benar.\"",
+   "Anak: \"Aku akan membiasakan diri melakukannya setiap hari.\"",
+   "Anak: \"Ternyata kebiasaan baik bisa dimulai dari langkah kecil!\""
+  ];
+  en=[
+   "Child: \"Today, I want to learn something new!\"",
+   "Child: \"Oh, it looks like there is something I need to fix.\"",
+   "Child: \"Why does this happen? I want to find out.\"",
+   "Guide: \"Let's take the first step the right way.\"",
+   "Child: \"Now it's my turn to try!\"",
+   "Guide: \"That's okay. Let's try again the right way.\"",
+   "Child: \"I'll make this a habit every day.\"",
+   "Child: \"Good habits can start with small steps!\""
+  ];
+ }else{
+  id=[
+   "Tokoh utama: \"Aku merasa sesuatu akan berubah hari ini.\"",
+   "Tokoh utama: \"Aku tidak bisa berpura-pura bahwa semua baik-baik saja.\"",
+   "Tokoh utama: \"Aku harus mencari tahu apa yang sebenarnya terjadi.\"",
+   "Tokoh utama: \"Petunjuk ini mungkin membawaku pada jawabannya.\"",
+   "Tokoh utama: \"Kita tidak bisa berhenti sekarang. Taruhannya terlalu besar.\"",
+   "Tokoh utama: \"Bagaimana jika semua yang kulakukan ternyata salah?\"",
+   "Tokoh utama: \"Aku sudah sampai sejauh ini. Aku akan menghadapinya.\"",
+   "Tokoh utama: \"Semua yang terjadi telah mengubahku. Ini bukan akhir perjalanan.\""
+  ];
+  en=[
+   "Protagonist: \"I have a feeling that everything will change today.\"",
+   "Protagonist: \"I cannot pretend that everything is fine.\"",
+   "Protagonist: \"I have to find out what really happened.\"",
+   "Protagonist: \"This clue might lead me to the answer.\"",
+   "Protagonist: \"We cannot stop now. Too much is at stake.\"",
+   "Protagonist: \"What if everything I did was wrong?\"",
+   "Protagonist: \"I have come this far. I will face this.\"",
+   "Protagonist: \"Everything that happened has changed me. This journey is not over.\""
+  ];
+ }
+ const idx=i%id.length;
+ return dialogLanguage==="id"?id[idx]:en[idx];
+}
+function getCameraDirection(s, style){
+ const sceneText=(String(s.title||"")+" "+String(s.summary||"")+" "+String(s.action||"")).toLowerCase();
+ let movement="Use a gentle dolly-in or subtle push-in toward the main subject, with stable framing and a brief hold at the emotional or narrative beat.";
+ if(/lari|berlari|kejar|mengejar|kabur|melarikan|berjalan cepat|run|chase|escape|sprint/.test(sceneText)) movement="Use a smooth tracking shot that follows the subject's direction of travel; keep screen direction and subject framing consistent, with no unnecessary cuts.";
+ else if(/bertarung|melawan|serang|menyerang|pertempuran|berkelahi|duel|fight|battle|attack|combat/.test(sceneText)) movement="Use a controlled lateral tracking move or restrained arc around the action, keeping the main action readable and avoiding disorienting spins or excessive shake.";
+ else if(/berbicara|berdialog|mengaku|menjelaskan|berkata|percakapan|dialog|talk|speak|confess|explain/.test(sceneText)) movement="Use a steady medium shot for the speaking beat, then a restrained slow push-in for emotional emphasis; keep the speaker's face and mouth clearly visible for lip-sync.";
+ else if(/menemukan|melihat|menyadari|terkejut|rahasia|petunjuk|discover|finds|realizes|surprise|clue/.test(sceneText)) movement="Begin with a readable medium or over-the-shoulder view, then slowly push in or rack focus toward the discovered detail and the character's reaction.";
+ else if(/sedih|menangis|kehilangan|merenung|berduka|sad|cry|grief|reflect/.test(sceneText)) movement="Use a restrained close-up or slow push-in with minimal camera movement, allowing the emotion to read naturally without melodramatic motion.";
+ else if(/pemandangan|desa|kerajaan|kota|hutan|gunung|laut|landscape|village|kingdom|city|forest|mountain|ocean/.test(sceneText)) movement="Establish the environment with a wide shot and a slow pan or gentle crane/dolly move, then settle on the main subject; preserve clear spatial geography.";
+ else if(/produk|menampilkan|memperlihatkan|product|showcase/.test(sceneText)) movement="Use a deliberate slow push-in, controlled orbit, or close-up reveal suited to the subject; keep the subject unobstructed and avoid excessive camera motion.";
+ let styleNote="Adapt the shot language to the selected visual style while preserving its rendering, motion, and aesthetic conventions.";
+ const st=String(style||"").toLowerCase();
+ if(/anime|2d|illustrat|cartoon|pixar|dreamworks|3d animation/.test(st)) styleNote="Adapt camera movement to the selected animation style: clean readable staging, intentional easing, expressive framing, and no physically implausible motion unless the story calls for it.";
+ else if(/documentary|realistic|photoreal|live action/.test(st)) styleNote="Keep camera movement physically plausible for the selected realistic/documentary style; use natural lens perspective, restrained movement, and believable focus behavior.";
+ else if(/commercial|product|luxury|fashion/.test(st)) styleNote="Use polished, deliberate commercial framing with controlled motion, clear subject separation, and premium pacing appropriate to the selected visual style.";
+ else if(/stop motion|clay/.test(st)) styleNote="Respect the selected stop-motion/clay aesthetic; use deliberate, stable framing and movement that feels compatible with the material and production style.";
+ return movement+" "+styleNote+" Choose shot size and angle according to the scene's emotional purpose; maintain eyeline, screen direction, spatial continuity, and character visibility. Avoid random camera changes, excessive shake, unnecessary cuts, and camera movement that obscures the main action.";
+}
+
+function getSoundDesign(s,style){
+ const sceneText=(String(s.title||"")+" "+String(s.summary||"")+" "+String(s.action||"")+" "+String(s.location||"")).toLowerCase();
+ const st=String(style||"").toLowerCase();
+ let ambience="Use subtle location-appropriate ambient sound that establishes the environment without distracting from the action or dialogue.";
+ let sfx="Add restrained, synchronized Foley for visible actions and object interactions; do not add sounds for actions that are not shown.";
+ let music="Use an understated instrumental score that supports the scene's emotional tone, with a natural build and a clean ending.";
+ if(/hutan|rimba|pepohonan|forest|jungle/.test(sceneText)) ambience="Ambience: soft wind through leaves, distant birds, and subtle forest room tone; keep the soundscape coherent with the visible environment.";
+ else if(/laut|pantai|ombak|kapal|ocean|beach|sea|ship/.test(sceneText)) ambience="Ambience: gentle waves, sea breeze, and distant coastal sounds appropriate to the shot; avoid overpowering dialogue.";
+ else if(/hujan|badai|petir|rain|storm|thunder/.test(sceneText)) ambience="Ambience: scene-appropriate rainfall and distant thunder when visible or narratively justified; maintain consistent weather acoustics.";
+ else if(/kota|jalan raya|pasar|keramaian|city|street|market|crowd/.test(sceneText)) ambience="Ambience: restrained city or crowd bed, distant traffic and location-specific background activity; keep incidental voices indistinct unless scripted.";
+ else if(/rumah|kamar|ruangan|istana|kantor|interior|room|house|palace|office|interior/.test(sceneText)) ambience="Ambience: subtle indoor room tone with natural reflections matching the size and material of the location.";
+ if(/lari|berlari|kejar|mengejar|berjalan|run|chase|walk|sprint/.test(sceneText)) sfx="Foley: synchronized footsteps, cloth movement, and surface contact matching the character's pace and the ground material.";
+ else if(/bertarung|melawan|serang|menyerang|pertempuran|berkelahi|fight|battle|attack|combat/.test(sceneText)) sfx="Foley/SFX: controlled impacts, movement swishes, and contact sounds precisely timed to visible actions; avoid exaggerated or continuous impacts when none occur.";
+ else if(/pintu|membuka|menutup|meletakkan|mengambil|menjatuhkan|door|open|close|place|pick up|drop/.test(sceneText)) sfx="Foley: subtle, accurately synchronized object handling, footsteps, and door or prop sounds only when those actions are visible.";
+ else if(/produk|menampilkan|memperlihatkan|product|showcase/.test(sceneText)) sfx="SFX: minimal, polished transition accents or delicate product interaction sounds only where appropriate; keep the product clear and avoid distracting effects.";
+ if(/sedih|menangis|kehilangan|merenung|berduka|sad|cry|grief|reflect/.test(sceneText)) music="Music: sparse, gentle, emotionally restrained instrumental textures with space for the performance; avoid melodrama.";
+ else if(/bahagia|merayakan|menang|keberhasilan|gembira|happy|celebrate|victory|success/.test(sceneText)) music="Music: warm, uplifting instrumental score with a measured rise that supports the positive beat without overpowering speech.";
+ else if(/tegang|bahaya|ancaman|misteri|rahasia|menegangkan|danger|threat|mystery|suspense/.test(sceneText)) music="Music: restrained suspenseful textures and a gradual tension build; avoid jump-scare hits unless the scene explicitly calls for them.";
+ else if(/komedi|lucu|kocak|humor|comedy|funny|playful/.test(sceneText)) music="Music: light, playful instrumental accents with precise timing; leave pauses for comedic beats and dialogue.";
+ if(/documentary|realistic|photoreal|live action/.test(st)) music+=" Favor naturalistic dynamics and believable acoustic perspective.";
+ else if(/commercial|product|luxury|fashion/.test(st)) music+=" Use a polished, style-appropriate mix with clean transitions and premium restraint.";
+ else if(/anime|2d|illustrat|cartoon|pixar|dreamworks|3d animation/.test(st)) music+=" Match the selected animation's tone while keeping effects clear and synchronized to the action.";
+ return "SOUND DESIGN (AUTO-ADAPTED TO SCENE AND VISUAL STYLE):\nAMBIENCE: "+ambience+"\nFOLEY / SFX: "+sfx+"\nBACKGROUND MUSIC: "+music+"\nMIXING & CONTINUITY: Keep dialogue intelligible and foremost in the mix. Duck music under every spoken line; keep ambience and reverb consistent with the location; synchronize all effects to visible action. Use no lyrics, extra voices, or additional dialogue unless explicitly requested. Fade or resolve the music naturally at the end of the shot. Do not add sounds that contradict the scene.";
+}
+
+function makePrompt(s,i,type){
+ const world=document.getElementById("world").value;
+ const character=document.getElementById("character").value;
+ const characterLock=document.getElementById("characterLock").value.trim();
+ const visual=document.getElementById("visual").value;
+ const rules=document.getElementById("rules").value;
+ const style=getSelectedVisualStyle();
+ const ratio=document.getElementById("ratio").value;
+ const extra=document.getElementById("extra").value.trim();
+ const dialogue=s.dialogue;
+ let p="PROJECT: "+titleText+"\nORIGINAL IDEA: "+ideaText+
+ "\nWORLD BIBLE: "+world+"\nCHARACTER BIBLE: "+character+
+ "\nCHARACTER CONSISTENCY LOCK: "+(characterLock||"Keep the same character identity as the established reference image.")+
+ "\nVISUAL IDENTITY: "+visual+"\nCONSISTENCY LOCK: "+rules+
+ "\nDIALOGUE LANGUAGE: "+(dialogLanguage==="id"?"Bahasa Indonesia":"English")+
+ "\n\nSCENE "+String(i+1).padStart(2,"0")+": "+s.title+
+ "\nSCENE PURPOSE: "+s.summary+"\nLOCATION: "+s.location+
+ "\nMAIN ACTION: "+s.action+"\n";
+ if(type==="image"){
+  p+="\nIMAGE GENERATION PROMPT:\nCreate one cinematic still frame depicting this scene. Show a clear focal point, readable expression and body pose, appropriate environment and props. Treat the CHARACTER CONSISTENCY LOCK and any supplied character reference image as strict identity constraints. Preserve the exact same face, hair, skin tone, apparent age, body proportions, costume design, signature colors, and accessories across all scenes. Change only pose, expression, and action when the scene requires it. This is a still image: do not render written dialogue, subtitles, speech bubbles, captions, or typography into the image unless specifically requested.\n";
+ }else{
+  p+="\nVIDEO GENERATION PROMPT:\nAnimate the action above with a clear beginning, middle, and end. Use natural body mechanics and controlled movement.\nCAMERA DIRECTION (AUTO-ADAPTED TO THIS SCENE AND VISUAL STYLE): "+getCameraDirection(s,style)+"\n\n"+getSoundDesign(s,style)+"\nTreat the CHARACTER CONSISTENCY LOCK and supplied reference image as strict identity constraints. Keep the exact same face, hair, skin tone, apparent age, body proportions, costume design, signature colors, and accessories. Do not redesign the character between frames; change only pose, expression, and action as needed. Keep props, lighting logic, and screen direction consistent throughout the shot. SPEAKING DIALOGUE — use this exact line verbatim, do not paraphrase or omit it: \""+dialogue+"\". Deliver the line naturally in "+(dialogLanguage==="id"?"Bahasa Indonesia":"English")+" with emotion appropriate to the scene. If multiple characters are present, the intended speaker says this line. Synchronize mouth movement precisely to every spoken word. Do not invent additional dialogue. Avoid on-screen subtitles unless requested.\n";
+ }
+ p+="VISUAL STYLE: "+style+". Apply this exact visual direction consistently across every scene, including rendering technique, materials, lighting, color treatment, and overall aesthetic.\nASPECT RATIO: "+ratio+
+ ".\nADDITIONAL RULES: "+(extra||"Keep the setting faithful to the story concept.")+
+ ".\nQUALITY CONTROL: cinematic composition, coherent anatomy and materials, consistent character design, no unwanted text or watermark.";
+ if(type==="video")p+="\nAVOID: identity drift, face morphing, wardrobe changes, flicker, jitter, broken anatomy, inconsistent props, sudden location changes, unintended cuts, and dialogue in the wrong language.";
+ return p;
+}
+
+function buildCharacterReferencePrompt(){
+ const character=document.getElementById("character").value.trim();
+ const lock=document.getElementById("characterLock").value.trim();
+ const visual=document.getElementById("visual").value.trim();
+ const style=getSelectedVisualStyle();
+ const ratio=document.getElementById("ratio").value;
+ return "AICRATIVE — MASTER CHARACTER REFERENCE SHEET\n\nCHARACTER DESCRIPTION:\n"+character+"\n\nIDENTITY LOCK — MUST FOLLOW EXACTLY:\n"+lock+"\n\nVISUAL DIRECTION:\n"+visual+"\n\nVISUAL STYLE:\n"+style+"\n\nCreate a clean professional character reference sheet for production continuity. Show the same character in front view, three-quarter view, and side view, plus one clear full-body standing pose and a small set of readable facial expressions. Keep face, hairstyle, skin tone, apparent age, body proportions, costume, colors, and accessories identical across every view. Neutral uncluttered studio background, even lighting, full character visible, consistent scale and anatomy, no dramatic camera distortion, no extra characters, no decorative text, no watermark. Treat this sheet as the canonical reference for all later scenes. Aspect ratio: "+ratio+".";
+}
+function copyCharacterReferencePrompt(){
+ if(!document.getElementById("character").value.trim()) { notify("Susun cerita terlebih dahulu agar Character Bible terisi."); return; }
+ copyText(buildCharacterReferencePrompt());
+}
+
+function generateStory(idea){
+ ideaText=idea;titleText=titleFrom(ideaText);
+ const b=infer(ideaText);
+ if(document.getElementById("extra").value.trim())b.rules+=" Aturan tambahan pengguna: "+document.getElementById("extra").value.trim();
+ document.getElementById("world").value=b.world;
+ document.getElementById("character").value=b.character;
+ document.getElementById("characterLock").value="IDENTITY MUST MATCH THE SAME REFERENCE IMAGE IN EVERY SCENE. Face shape and facial features, eye shape and color, skin tone, hairstyle and hair color, apparent age, body proportions, height/build impression, base costume silhouette, exact costume colors, footwear, and signature accessories must remain unchanged. Do not add, remove, or redesign defining features. Keep character identity stable across still images and every video frame; vary only pose, expression, and action when required by the scene. If a detail is not specified, follow the approved reference image rather than inventing a new design.";
+ document.getElementById("visual").value=b.visual;
+ document.getElementById("rules").value=b.rules;
+ const defs=sceneDefs(ideaText,Number(document.getElementById("count").value));
+ scenesData=defs.map((d,i)=>({title:d[0],summary:d[1],location:locationFor(i,ideaText),action:actionFor(i,d,ideaText),dialogue:dialogueFor(i,ideaText)}));
+ refreshPrompts();
+ document.getElementById("bible").classList.remove("hidden");
+ document.getElementById("scenes").classList.remove("hidden");
+ document.getElementById("sceneStat").textContent=scenesData.length;
+ document.getElementById("promptStat").textContent=scenesData.length*2;
+ document.getElementById("status").textContent="Dialog: "+(dialogLanguage==="id"?"Bahasa Indonesia":"English")+". "+scenesData.length+" scene berhasil disusun.";
+ updateDashboardStats();
+ showView("story");
+ document.getElementById("bible").scrollIntoView({behavior:"smooth",block:"start"});
+ notify("Scene dibuat dengan dialog "+(dialogLanguage==="id"?"Bahasa Indonesia":"English")+".");
+}
+function refreshPrompts(){
+ if(!scenesData.length)return;
+ scenesData.forEach((s,i)=>{if(typeof s.dialogue!=="string")s.dialogue=dialogueFor(i,ideaText);s.image=makePrompt(s,i,"image");s.video=makePrompt(s,i,"video")});
+ renderScenes();
+}
+function renderScenes(){
+ document.getElementById("sceneList").innerHTML=scenesData.map((s,i)=>`
+ <article class="scene">
+ <div class="scene-head"><div class="scene-num">${String(i+1).padStart(2,"0")}</div><div><h3>${esc(s.title)}</h3><div class="scene-meta">${esc(s.location)} · Scene ${i+1} dari ${scenesData.length}</div></div><span class="tag" style="margin-left:auto">${dialogLanguage==="id"?"🇮🇩 IND":"🇬🇧 ENG"}</span></div>
+ <div class="scene-body">
+ <p class="scene-summary">${esc(s.summary)} <strong>Aksi:</strong> ${esc(s.action)}</p>
+ <div class="prompt"><div class="prompt-head"><strong>▧ IMAGE PROMPT</strong><button onclick="copyScene(${i},'image')">⧉ Copy Image Prompt</button></div><div class="prompt-text">${esc(s.image)}</div></div>
+ <div class="prompt"><div class="prompt-head"><strong>▷ VIDEO PROMPT + DIALOG</strong><button onclick="copyScene(${i},'video')">⧉ Copy Video Prompt + Dialog</button></div><div class="prompt-text">${esc(s.video)}</div></div>
+ <div class="scene-bottom"><span>Dialog sudah tertanam di video prompt — tidak perlu copy terpisah</span><button class="btn light small" onclick="downloadScene(${i})">Export Scene .txt ↓</button></div>
+ </div></article>`).join("");
+}
+async function copyText(text){
+ try{await navigator.clipboard.writeText(text);notify("Berhasil disalin.")}
+ catch(e){const t=document.createElement("textarea");t.value=text;document.body.appendChild(t);t.select();try{document.execCommand("copy");notify("Berhasil disalin.")}catch(err){notify("Salin teks secara manual.")}t.remove()}
+}
+function copyScene(i,type){if(scenesData[i])copyText(scenesData[i][type])}
+function copyAll(type){
+ if(!scenesData.length){notify("Susun cerita terlebih dahulu.");return}
+ copyText(scenesData.map((s,i)=>"==============================\nSCENE "+String(i+1).padStart(2,"0")+" — "+s.title+"\n==============================\n"+(type==="dialog"?s.dialogue:s[type])).join("\n\n\n"));
+}
+function downloadAllScenes(){
+ if(!scenesData.length){notify("Susun cerita terlebih dahulu.");return}
+ const header="AICRATIVE — STORY & SCENE PROMPTS\nDIALOGUE LANGUAGE: "+(dialogLanguage==="id"?"Bahasa Indonesia":"English")+"\nTOTAL SCENES: "+scenesData.length+"\n\n";
+ const body=scenesData.map((s,i)=>[
+  "==================================================",
+  "SCENE "+String(i+1).padStart(2,"0")+" — "+s.title,
+  "==================================================",
+  "RINGKASAN: "+s.summary,
+  "AKSI: "+s.action,
+  "LOKASI: "+s.location,
+  "\n--- DIALOG ---\n"+s.dialogue,
+  "\n--- IMAGE PROMPT ---\n"+s.image,
+  "\n--- VIDEO PROMPT + DIALOG ---\n"+s.video
+ ].join("\n")).join("\n\n\n");
+ const blob=new Blob([header+body],{type:"text/plain;charset=utf-8"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="aicrative-all-scenes.txt";a.click();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ notify("Semua scene berhasil diekspor ke satu file .txt.");
+}
+function downloadScene(i){
+ const s=scenesData[i];if(!s)return;
+ const content=s.title+"\nDIALOGUE LANGUAGE: "+(dialogLanguage==="id"?"Bahasa Indonesia":"English")+"\n\n--- DIALOG ---\n"+s.dialogue+"\n\n--- IMAGE PROMPT ---\n"+s.image+"\n\n--- VIDEO PROMPT ---\n"+s.video;
+ const blob=new Blob([content],{type:"text/plain;charset=utf-8"});
+ const url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="aicrative-scene-"+String(i+1).padStart(2,"0")+".txt";a.click();URL.revokeObjectURL(url);
+}
+document.getElementById("languageModal").addEventListener("click",e=>{
+ if(e.target.id==="languageModal")closeLanguageModal();
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeLanguageModal()});
+
+
+/* WORKSPACE NAVIGATION + xKiro API */
+let openaiApiKey = '';
+let openaiModelName = 'qwen/qwen3.7-plus:free';
+let generationModeValue = 'auto';
+function enterApp(){document.getElementById('landingPage').classList.add('hidden');document.getElementById('appShell').classList.remove('hidden');showView('dashboard');window.scrollTo({top:0,behavior:'smooth'});}
+function backToLanding(){document.getElementById('appShell').classList.add('hidden');document.getElementById('landingPage').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});}
+function showView(name){
+ document.querySelectorAll('.workspace-view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));
+ document.querySelectorAll('.appnav [data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===name));
+ const legacy=document.getElementById('legacyMain');
+ if(name==='story'){
+   const mount=document.getElementById('storyWorkspaceMount');
+   if(!mount.contains(document.getElementById('idea'))){
+     const main=document.getElementById('legacyMain');
+     main.classList.remove('hidden');
+     const hero=main.querySelector('.hero'); if(hero)hero.classList.add('hidden');
+     const layout=main.querySelector('.layout');
+     if(layout){
+       const left=layout.firstElementChild;
+       const idea=document.getElementById('idea'),settings=document.getElementById('settingsPanel'),bible=document.getElementById('bible'),scenes=document.getElementById('scenes');
+       [idea,settings,bible,scenes].forEach(el=>{if(el)mount.appendChild(el)});
+       const side=layout.querySelector('.side');if(side)side.classList.add('hidden');
+     }
+   }
+ }
+ updateDashboardStats();window.scrollTo({top:0,behavior:'smooth'});
+}
+function updateDashboardStats(){const sc=document.getElementById('dashProjectStatus');if(sc)sc.textContent=scenesData.length;const active=document.getElementById('dashSceneCount');if(active)active.textContent=scenesData.length;const st=document.getElementById('dashStatus');if(st)st.textContent=ideaText?'Proyek terakhir: '+titleText+'. '+scenesData.length+' scene tersedia.':'Workspace siap. Mulai proyek cerita baru.';}
+const AICRATIVE_SUPABASE_URL = "https://vlypxvhsbjwazjbqxehz.supabase.co/functions/v1/aicrative-ai";
+const AICRATIVE_SUPABASE_PUBLIC_KEY = "sb_publishable_HVH5yiccWYJAzOEoIoNb5g_03bMlAoZ";
+function saveOpenAISettings(){openaiModelName=document.getElementById('openaiModel').value;generationModeValue=document.getElementById('generationMode').value;try{sessionStorage.setItem('aicrative_xkiro_model',openaiModelName);sessionStorage.setItem('aicrative_generation_mode',generationModeValue)}catch(e){}document.getElementById('apiStatus').textContent='Pengaturan tersimpan. Backend Supabase → xKiro. Model: '+openaiModelName+'.';notify('Pengaturan generator diperbarui.')}
+function clearOpenAISettings(){openaiModelName='qwen/qwen3.7-plus:free';document.getElementById('openaiModel').value=openaiModelName;try{sessionStorage.removeItem('aicrative_xkiro_model')}catch(e){}document.getElementById('apiStatus').textContent='Model dikembalikan ke Qwen3.7 Plus (Free).';notify('Pengaturan model direset.')}
+async function callOpenAI(prompt){
+ const model=document.getElementById('openaiModel').value||openaiModelName;
+ const res=await fetch(AICRATIVE_SUPABASE_URL,{method:'POST',headers:{'Content-Type':'application/json','apikey':AICRATIVE_SUPABASE_PUBLIC_KEY,'Authorization':'Bearer '+AICRATIVE_SUPABASE_PUBLIC_KEY},body:JSON.stringify({model,messages:[{role:'system',content:'You are AICRATIVE story generation engine. Return valid JSON only when requested.'},{role:'user',content:prompt}],temperature:0.7,max_tokens:4000})});
+ let data;const raw=await res.text();try{data=JSON.parse(raw)}catch(e){throw new Error('Respons backend bukan JSON (HTTP '+res.status+'). '+raw.slice(0,180))}
+ if(!res.ok)throw new Error(data.error?.message||data.message||('HTTP '+res.status));
+ const content=data.choices?.[0]?.message?.content?.trim();if(!content)throw new Error('Backend merespons tetapi teks AI kosong. Periksa secret XKIRO_API_KEY, model, dan log Edge Function.');return content;
+}
+async function testOpenAIConnection(){saveOpenAISettings();const status=document.getElementById('apiStatus');status.textContent='Menguji Supabase Edge Function dan xKiro...';try{const out=await callOpenAI('Reply with exactly this text: AICRATIVE CONNECTED');status.textContent='Koneksi berhasil. Respons AI: '+out.slice(0,220);notify('Koneksi Supabase → xKiro berhasil.')}catch(e){status.textContent='Koneksi gagal: '+e.message;notify('Tes koneksi gagal. Lihat pesan status untuk penyebabnya.')}}
+function buildOpenAIStoryRequest(idea){const n=Number(document.getElementById('count').value);const style=getSelectedVisualStyle();const ratio=document.getElementById('ratio').value;const extra=document.getElementById('extra').value.trim();return `You are AICRATIVE, a professional story and scene prompt director. Produce valid JSON only with this exact schema: {"title":"...","world":"...","character":"...","visual":"...","rules":"...","characterLock":"...","scenes":[{"title":"...","summary":"...","location":"...","action":"...","dialogue":"..."}]}. Create exactly ${n} scenes. User story idea: ${idea}. Dialogue language: ${dialogLanguage==='id'?'Indonesian':'English'}. Visual style: ${style}. Aspect ratio: ${ratio}. Additional rules: ${extra||'None'}. Write detailed but concise scene-specific actions and natural dialogue. Make every scene causally connected. Keep character identity, costume, world details, and props consistent. Dialogue should be included in each scene and should not be empty. Do not include markdown fences. CRITICAL: Return story content only in the schema. Do not write or replace image prompts, video prompts, camera directions, sound design blocks, lip-sync instructions, identity-lock rules, or production prompt formatting. The AICRATIVE app assembles those locked technical prompt sections locally. Preserve dialogue exactly in the dialogue field; do not omit it or add extra dialogue outside the requested scene.`}
+async function generateStoryWithOpenAI(idea){const status=document.getElementById('apiStatus');try{notify('xKiro sedang mengembangkan cerita. Struktur prompt AICRATIVE tetap terkunci...');const raw=await callOpenAI(buildOpenAIStoryRequest(idea));const cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');const obj=JSON.parse(cleaned);if(!Array.isArray(obj.scenes)||!obj.scenes.length)throw new Error('Respons xKiro tidak berisi daftar scene yang valid.');ideaText=idea;titleText=obj.title||titleFrom(idea);document.getElementById('world').value=obj.world||'';document.getElementById('character').value=obj.character||'';document.getElementById('characterLock').value=obj.characterLock||'Keep character identity consistent across all scenes.';document.getElementById('visual').value=obj.visual||'';document.getElementById('rules').value=obj.rules||'';scenesData=obj.scenes.slice(0,Number(document.getElementById('count').value)).map((s,i)=>({title:s.title||('Scene '+(i+1)),summary:s.summary||'',location:s.location||'Location not specified',action:s.action||'',dialogue:s.dialogue||''}));refreshPrompts();document.getElementById('bible').classList.remove('hidden');document.getElementById('scenes').classList.remove('hidden');document.getElementById('sceneStat').textContent=scenesData.length;document.getElementById('promptStat').textContent=scenesData.length*2;document.getElementById('status').textContent='xKiro API: '+scenesData.length+' scene berhasil dibuat.';document.getElementById('apiStatus').textContent='xKiro berhasil menghasilkan '+scenesData.length+' scene.';updateDashboardStats();showView('story');document.getElementById('bible').scrollIntoView({behavior:'smooth',block:'start'});notify('Cerita dibuat dengan xKiro. Struktur prompt produksi AICRATIVE tetap dipertahankan.');return true}catch(e){document.getElementById('apiStatus').textContent='xKiro gagal menghasilkan cerita: '+e.message;notify('xKiro gagal: '+e.message);return false}}
+
+// Initialize workspace and settings
+try{openaiApiKey='';openaiModelName=sessionStorage.getItem("aicrative_xkiro_model")||"qwen/qwen3.7-plus:free";generationModeValue=sessionStorage.getItem("aicrative_generation_mode")||"auto";document.getElementById("openaiModel").value=openaiModelName;document.getElementById("generationMode").value=generationModeValue;document.getElementById("apiStatus").textContent="Backend Supabase siap. Klik Tes koneksi API untuk memverifikasi.";}catch(e){}updateDashboardStats();
+</script>
+</div>
+</body>
+</html>
