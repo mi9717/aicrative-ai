@@ -492,133 +492,59 @@ export default function App() {
     },
   ];
 
-  // Helper for status badge in nav
-  const getStatusDisplay = () => {
-    if (settings.mode === 'local') {
-      return {
-        label: 'Local Mode',
-        dotClass: 'bg-neutral-500',
-        textClass: 'text-neutral-600',
-      };
-    }
-    if (connStatus.state === 'success') {
-      return {
-        label: 'AI Connected',
-        dotClass: 'bg-emerald-500',
-        textClass: 'text-emerald-700',
-      };
-    }
-    if (connStatus.state === 'testing') {
-      return {
-        label: 'Checking...',
-        dotClass: 'bg-amber-500 animate-pulse',
-        textClass: 'text-amber-700',
-      };
-    }
-    if (connStatus.state === 'error') {
-      return {
-        label: 'Connection Error',
-        dotClass: 'bg-rose-500',
-        textClass: 'text-rose-700',
-      };
-    }
-    return {
-      label: 'AI Ready',
-      dotClass: 'bg-emerald-500',
-      textClass: 'text-neutral-600',
-    };
-  };
+  // Local engine status badge
+  const getStatusDisplay = () => ({
+    label: 'Local Engine',
+    dotClass: 'bg-emerald-500',
+    textClass: 'text-emerald-700',
+  });
 
   // =========================================================================
-  // RENDER: PASSWORD GATE (AUTHENTICATION SCREEN)
+  // RENDER: SUPABASE AUTHENTICATION
   // =========================================================================
   if (isAuthenticated === false || isAuthenticated === null) {
     return (
       <div className="min-h-screen bg-[#f7f6f2] text-[#141619] antialiased flex flex-col justify-between p-6">
         <header className="max-w-md mx-auto w-full pt-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#ff5a1f] text-white font-bold text-sm flex items-center justify-center">
-              A
-            </div>
-            <span className="font-semibold text-base tracking-tight text-[#141619]">
-              AICRATIVE
-            </span>
+            <div className="w-7 h-7 rounded-lg bg-[#ff5a1f] text-white font-bold text-sm flex items-center justify-center">A</div>
+            <span className="font-semibold text-base tracking-tight">AICRATIVE</span>
           </div>
-          <span className="text-xs text-[#73767c]">
-            Secure Gateway
-          </span>
+          <span className="text-xs text-[#73767c]">Creative Studio</span>
         </header>
-
         <div className="max-w-sm w-full mx-auto my-auto py-8">
-          <div className="p-7 rounded-2xl bg-white border border-[#e6e4dc] shadow-sm space-y-6">
+          <div className="p-7 rounded-2xl bg-white border border-[#e6e4dc] shadow-sm space-y-5">
             <div className="space-y-1.5 text-center">
               <div className="w-10 h-10 rounded-xl bg-[#fff0e8] text-[#ff5a1f] mx-auto flex items-center justify-center mb-3">
                 <Lock className="w-5 h-5" />
               </div>
-              <h1 className="text-xl font-semibold tracking-tight text-[#141619]">
-                AICRATIVE Studio
-              </h1>
-              <p className="text-xs text-[#73767c] leading-relaxed">
-                Masukkan password untuk mengakses workspace studio.
-              </p>
+              <h1 className="text-xl font-semibold tracking-tight">AICRATIVE Studio</h1>
+              <p className="text-xs text-[#73767c] leading-relaxed">Buat akun gratis atau masuk untuk menyimpan proyek di cloud.</p>
             </div>
-
-            {authError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <span className="leading-relaxed">{authError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-[#f7f6f2]">
+              <button type="button" onClick={() => { setAuthMode('login'); setAuthError(null); setAuthNotice(null); }} className={`py-2 rounded-md text-xs font-medium ${authMode === 'login' ? 'bg-white shadow-sm text-[#141619]' : 'text-[#73767c]'}`}>Masuk</button>
+              <button type="button" onClick={() => { setAuthMode('register'); setAuthError(null); setAuthNotice(null); }} className={`py-2 rounded-md text-xs font-medium ${authMode === 'register' ? 'bg-white shadow-sm text-[#141619]' : 'text-[#73767c]'}`}>Daftar gratis</button>
+            </div>
+            {authError && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><span className="leading-relaxed">{authError}</span></div>}
+            {authNotice && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">{authNotice}</div>}
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+              {authMode === 'register' && <div><label className="text-xs font-medium block mb-1.5">Nama tampilan</label><input type="text" value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="Nama Anda" autoComplete="name" className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" /></div>}
+              <div><label className="text-xs font-medium block mb-1.5">Email</label><input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="nama@email.com" autoComplete="email" required className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" /></div>
               <div>
-                <label className="text-xs font-medium text-[#141619] block mb-1.5">
-                  Password Akses
-                </label>
+                <label className="text-xs font-medium block mb-1.5">Password</label>
                 <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="Masukkan password..."
-                    autoFocus
-                    className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f] focus:ring-1 focus:ring-[#ff5a1f] transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#73767c] hover:text-[#141619]"
-                    title={showPassword ? 'Sembunyikan' : 'Tampilkan'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  <input type={showPassword ? 'text' : 'password'} value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Minimal 6 karakter" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} minLength={6} required className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#73767c]">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
                 </div>
               </div>
-
-              <button
-                type="submit"
-                disabled={isVerifyingAuth}
-                className="w-full py-2.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e64a12] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isVerifyingAuth ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Memverifikasi...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Masuk ke Studio</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+              <button type="submit" disabled={isVerifyingAuth} className="w-full py-2.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e64a12] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                {isVerifyingAuth ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Memproses...</span></> : <><span>{authMode === 'register' ? 'Buat akun gratis' : 'Masuk ke Studio'}</span><ArrowRight className="w-4 h-4" /></>}
               </button>
             </form>
+            <p className="text-[11px] text-[#8c8f95] text-center">Akun gratis. Prompt dibuat secara lokal tanpa API AI eksternal.</p>
           </div>
         </div>
-
-        <footer className="max-w-md mx-auto w-full pb-4 text-center text-xs text-[#8c8f95]">
-          © AICRATIVE AI Creative Production Studio
-        </footer>
+        <footer className="max-w-md mx-auto w-full pb-4 text-center text-xs text-[#8c8f95]">© AICRATIVE AI Creative Production Studio</footer>
       </div>
     );
   }
