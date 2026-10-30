@@ -506,8 +506,8 @@ export default function App() {
       <div className="min-h-screen bg-[#f7f6f2] text-[#141619] antialiased flex flex-col justify-between p-6">
         <header className="max-w-md mx-auto w-full pt-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#ff5a1f] text-white font-bold text-sm flex items-center justify-center">A</div>
-            <span className="font-semibold text-base tracking-tight">AICRATIVE</span>
+            <img src="/aicrative-mark.svg" alt="" className="w-8 h-8 object-contain" />
+            <span className="font-extrabold text-base tracking-tight"><span className="text-[#FF7A00]">AI</span><span className="text-[#1F1F1F]">CRATIVE</span></span>
           </div>
           <span className="text-xs text-[#73767c]">Creative Studio</span>
         </header>
@@ -697,12 +697,8 @@ export default function App() {
               onClick={() => setActiveTab('studio')}
               className="flex items-center gap-2.5 text-left"
             >
-              <div className="w-7 h-7 rounded-lg bg-[#ff5a1f] text-white font-bold text-sm flex items-center justify-center">
-                A
-              </div>
-              <span className="font-semibold text-sm tracking-tight text-[#141619]">
-                AICRATIVE
-              </span>
+              <img src="/aicrative-mark.svg" alt="" className="w-8 h-8 object-contain" />
+              <span className="font-extrabold text-sm tracking-tight"><span className="text-[#FF7A00]">AI</span><span className="text-[#1F1F1F]">CRATIVE</span></span>
             </button>
 
             {/* Navigation items: Single row, no wrapping */}
