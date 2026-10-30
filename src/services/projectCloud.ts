@@ -29,9 +29,10 @@ export async function listCloudProjects(): Promise<ProjectData[]> {
   const rows = await request('projects?select=id,title,project_data,created_at,updated_at&order=updated_at.desc') as Array<{ id: string; project_data: ProjectData; created_at: string; updated_at: string }>;
   return rows.map(row => ({ ...row.project_data, id: row.id, createdAt: row.created_at, updatedAt: row.updated_at }));
 }
-export async function saveCloudProject(project: ProjectData): Promise<void> {
+export async function saveCloudProject(project: ProjectData, userId: string): Promise<void> {
   const payload = {
     id: project.id,
+    user_id: userId,
     title: project.title,
     project_data: project,
     updated_at: new Date().toISOString(),
