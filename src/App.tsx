@@ -113,21 +113,16 @@ export default function App() {
 
   const initSampleProject = () => {
     if (!storyBible) {
-      const initialFallback = generateStoryLocalFallback(
-        storyIdea,
+      const initialProject = generateLocalCreativeProject({
+        idea: storyIdea,
         sceneCount,
         visualStyle,
-        aspectRatio,
-        additionalRules,
-        dialogueLanguage
-      );
-      const readyScenes = initialFallback.scenes.map((s, idx) => ({
-        ...s,
-        image: buildImagePrompt(initialFallback.bible, s, idx, visualStyle, aspectRatio),
-        video: buildVideoPrompt(initialFallback.bible, s, idx, visualStyle, aspectRatio, dialogueLanguage),
-      }));
-      setStoryBible(initialFallback.bible);
-      setScenes(readyScenes);
+        ratio: aspectRatio,
+        extra: additionalRules,
+        language: dialogueLanguage,
+      });
+      setStoryBible(initialProject.bible);
+      setScenes(initialProject.scenes);
     }
   };
 
