@@ -34,41 +34,32 @@ import {
   CheckCheck
 } from 'lucide-react';
 
-import { SceneData, StoryBible, ConnectionSettings, ConnectionStatus, ProjectData } from './types';
+import { SceneData, StoryBible, ProjectData, ConnectionStatus } from './types';
 import {
-  DEFAULT_MODEL,
-  AVAILABLE_MODELS,
-  loginWithPassword,
-  checkAuthSession,
-  logoutSession,
-  testBackendConnection,
-  generateStoryWithBackend,
-  generateStoryLocalFallback,
   buildImagePrompt,
   buildVideoPrompt,
   buildMasterCharacterReferenceSheet,
   formatPromptForTool,
-  loadProjectsFromStorage,
-  saveProjectToStorage,
-  deleteProjectFromStorage,
 } from './services/supabaseAicrative';
+import { getCurrentUser, signIn, signOut, signUp } from './services/supabaseAuth';
+import { clearLegacyLocalProjects, deleteCloudProject, listCloudProjects, readLegacyLocalProjects, saveCloudProject } from './services/projectCloud';
+import { generateLocalCreativeProject } from './engines';
 
 export default function App() {
   // Authentication & Gate State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [passwordInput, setPasswordInput] = useState<string>('');
+  const [emailInput, setEmailInput] = useState<string>('');
+  const [displayNameInput, setDisplayNameInput] = useState<string>('');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isVerifyingAuth, setIsVerifyingAuth] = useState<boolean>(false);
 
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<'studio' | 'projects' | 'guide' | 'engine'>('studio');
-
-  // Connection settings
-  const [settings, setSettings] = useState<ConnectionSettings>({
-    model: DEFAULT_MODEL,
-    mode: 'auto',
-  });
 
   const [connStatus, setConnStatus] = useState<ConnectionStatus>({
     state: 'idle',
@@ -109,32 +100,52 @@ export default function App() {
   }, []);
 
   const checkInitialAuth = async () => {
-    const valid = await checkAuthSession();
-    setIsAuthenticated(valid);
-    if (valid) {
-      handlePingEngine();
-      setSavedProjects(loadProjectsFromStorage());
-      initSampleProject();
+    try {
+      const user = await getCurrentUser();
+      setIsAuthenticated(!!user);
+      setCurrentUserId(user?.id || null);
+      if (user) {
+        handlePingEngine();
+        await refreshCloudProjects(user.id);
+        initSampleProject();
+      }
+    } catch (error) {
+      setIsAuthenticated(false);
+      setAuthError(error instanceof Error ? error.message : 'Gagal memeriksa sesi.');
+    }
+  };
+
+  const refreshCloudProjects = async (userId: string) => {
+    try {
+      let projects = await listCloudProjects();
+      if (projects.length === 0) {
+        const legacy = readLegacyLocalProjects();
+        for (const project of legacy) await saveCloudProject(project, userId);
+        if (legacy.length) {
+          clearLegacyLocalProjects();
+          projects = await listCloudProjects();
+          setToastMessage('Proyek lama berhasil dipindahkan ke akun cloud.');
+        }
+      }
+      setSavedProjects(projects);
+    } catch (error) {
+      console.error('Cloud project loading failed:', error);
+      setAuthError(error instanceof Error ? error.message : 'Gagal memuat proyek cloud.');
     }
   };
 
   const initSampleProject = () => {
     if (!storyBible) {
-      const initialFallback = generateStoryLocalFallback(
-        storyIdea,
+      const initialProject = generateLocalCreativeProject({
+        idea: storyIdea,
         sceneCount,
         visualStyle,
-        aspectRatio,
-        additionalRules,
-        dialogueLanguage
-      );
-      const readyScenes = initialFallback.scenes.map((s, idx) => ({
-        ...s,
-        image: buildImagePrompt(initialFallback.bible, s, idx, visualStyle, aspectRatio),
-        video: buildVideoPrompt(initialFallback.bible, s, idx, visualStyle, aspectRatio, dialogueLanguage),
-      }));
-      setStoryBible(initialFallback.bible);
-      setScenes(readyScenes);
+        ratio: aspectRatio,
+        extra: additionalRules,
+        language: dialogueLanguage,
+      });
+      setStoryBible(initialProject.bible);
+      setScenes(initialProject.scenes);
     }
   };
 
@@ -156,62 +167,67 @@ export default function App() {
 
   const effectiveStyle = visualStyle === 'Other' && customStyle.trim() ? customStyle.trim() : visualStyle;
 
-  // Handle password gate submit
+  // Supabase email/password authentication
   const handleLoginSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!passwordInput.trim()) {
-      setAuthError('Silakan masukkan password akses.');
+    setAuthError(null);
+    setAuthNotice(null);
+    if (!emailInput.trim() || !passwordInput) {
+      setAuthError('Masukkan email dan password.');
       return;
     }
-
-    setAuthError(null);
+    if (authMode === 'register' && !displayNameInput.trim()) {
+      setAuthError('Masukkan nama tampilan.');
+      return;
+    }
     setIsVerifyingAuth(true);
-
-    const result = await loginWithPassword(passwordInput);
-    setIsVerifyingAuth(false);
-
-    if (result.success) {
-      setIsAuthenticated(true);
+    try {
+      if (authMode === 'register') {
+        const result = await signUp(emailInput.trim(), passwordInput, displayNameInput.trim());
+        if (!result.session) {
+          setAuthNotice(result.message);
+          setAuthMode('login');
+        } else {
+          setIsAuthenticated(true);
+          setCurrentUserId(result.session.user.id);
+          await refreshCloudProjects(result.session.user.id);
+          initSampleProject();
+          showToast('Akun AICRATIVE berhasil dibuat.');
+        }
+      } else {
+        const session = await signIn(emailInput.trim(), passwordInput);
+        setIsAuthenticated(true);
+        setCurrentUserId(session.user.id);
+        await refreshCloudProjects(session.user.id);
+        initSampleProject();
+        handlePingEngine();
+        showToast('Berhasil masuk ke AICRATIVE.');
+      }
       setPasswordInput('');
-      showToast('Autentikasi berhasil. Selamat datang di AICRATIVE.');
-      handlePingEngine();
-      setSavedProjects(loadProjectsFromStorage());
-      initSampleProject();
-    } else {
-      setAuthError(result.error || 'Password salah. Akses ditolak.');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Autentikasi gagal.');
+    } finally {
+      setIsVerifyingAuth(false);
     }
   };
 
-  // Handle user logout
   const handleLogout = async () => {
-    await logoutSession();
+    await signOut();
     setIsAuthenticated(false);
+    setCurrentUserId(null);
+    setSavedProjects([]);
     setPasswordInput('');
     setAuthError(null);
-    showToast('Sesi telah diakhiri.');
+    showToast('Anda telah keluar dari akun.');
   };
 
-  // Test engine connectivity via server proxy
-  const handlePingEngine = async () => {
-    setConnStatus({ state: 'testing', message: 'Memverifikasi status AI Engine...' });
-    const res = await testBackendConnection(settings);
-    if (res.success) {
-      setConnStatus({
-        state: 'success',
-        message: 'Server proxy dan provider AI terhubung aktif.',
-        latencyMs: res.latencyMs,
-        lastResponse: res.rawResponse,
-        lastTestedAt: new Date(),
-      });
-    } else {
-      setConnStatus({
-        state: 'error',
-        message: res.message,
-        latencyMs: res.latencyMs,
-        lastResponse: res.rawResponse,
-        lastTestedAt: new Date(),
-      });
-    }
+  // Local Creative Engine runs in the browser; no provider connection is required.
+  const handlePingEngine = () => {
+    setConnStatus({
+      state: 'success',
+      message: 'Local Creative Engine siap. Semua prompt diproses di browser tanpa API AI eksternal.',
+      lastTestedAt: new Date(),
+    });
   };
 
   // Generation flow
@@ -230,104 +246,55 @@ export default function App() {
   const handleExecuteGeneration = async () => {
     setShowLanguageModal(false);
     setIsGenerating(true);
-    setGenerationStep('Menghubungi AI Engine...');
+    setGenerationStep('Local Creative Engine menyusun Character, Story, dan Scene...');
 
-    let bibleResult: StoryBible;
-    let scenesResult: SceneData[];
-
-    if (settings.mode !== 'local') {
-      try {
-        setGenerationStep('AI menyusun alur cerita & struktur adegan...');
-        const res = await generateStoryWithBackend(
-          storyIdea,
-          sceneCount,
-          effectiveStyle,
-          aspectRatio,
-          additionalRules,
-          dialogueLanguage,
-          settings
-        );
-        bibleResult = res.bible;
-        scenesResult = res.scenes;
-        setProjectTitle(res.bible.title || projectTitle);
-        showToast('Cerita berhasil diproduksi melalui Cloud AI Engine.');
-      } catch (err: any) {
-        console.warn('AI generation error:', err);
-        if (settings.mode === 'supabase') {
-          setIsGenerating(false);
-          setGenerationStep('');
-          showToast(`Mode Cloud AI gagal: ${err.message}`);
-          return;
-        }
-
-        // Automatic localbase fallback in Hybrid Mode
-        setGenerationStep('Beralih ke AICRATIVE Localbase Engine...');
-        const local = generateStoryLocalFallback(
-          storyIdea,
-          sceneCount,
-          effectiveStyle,
-          aspectRatio,
-          additionalRules,
-          dialogueLanguage
-        );
-        bibleResult = local.bible;
-        scenesResult = local.scenes;
-        setProjectTitle(local.bible.title || projectTitle);
-        showToast('Menggunakan Localbase Engine dengan kontinuitas penuh.');
-      }
-    } else {
-      setGenerationStep('Memproses cerita dengan Localbase Engine...');
-      const local = generateStoryLocalFallback(
-        storyIdea,
+    try {
+      const generated = generateLocalCreativeProject({
+        idea: storyIdea,
         sceneCount,
-        effectiveStyle,
+        visualStyle: effectiveStyle,
+        ratio: aspectRatio,
+        extra: additionalRules,
+        language: dialogueLanguage,
+      });
+      const bibleResult = generated.bible;
+      const finalScenes = generated.scenes;
+
+      setGenerationStep('Mengunci identitas karakter dan merakit prompt produksi...');
+      setProjectTitle(bibleResult.title || projectTitle);
+      setStoryBible(bibleResult);
+      setScenes(finalScenes);
+
+      const newProj: ProjectData = {
+        id: projectId,
+        title: bibleResult.title || projectTitle,
+        idea: storyIdea,
+        sceneCount,
+        visualStyle,
+        customStyle,
         aspectRatio,
         additionalRules,
-        dialogueLanguage
-      );
-      bibleResult = local.bible;
-      scenesResult = local.scenes;
-      setProjectTitle(local.bible.title || projectTitle);
-      showToast('Cerita berhasil disusun dari template lokal.');
+        dialogueLanguage,
+        bible: bibleResult,
+        scenes: finalScenes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      if (currentUserId) {
+        await saveCloudProject(newProj, currentUserId);
+        await refreshCloudProjects(currentUserId);
+      }
+      showToast('Character, Story, Scene, Image Prompt, dan Video Prompt berhasil dibuat secara lokal.');
+      setTimeout(() => {
+        document.getElementById('productionResults')?.scrollIntoView({ behavior: 'smooth' });
+      }, 250);
+    } catch (error) {
+      console.error('Local Creative Engine error:', error);
+      showToast('Generator lokal mengalami kendala. Periksa kembali input proyek.');
+    } finally {
+      setIsGenerating(false);
+      setGenerationStep('');
     }
-
-    setGenerationStep('Mengunci konsistensi karakter & prompt produksi...');
-
-    // Assemble final production prompts using the locked localbase templates
-    const finalScenes = scenesResult.map((s, idx) => ({
-      ...s,
-      image: buildImagePrompt(bibleResult, s, idx, effectiveStyle, aspectRatio),
-      video: buildVideoPrompt(bibleResult, s, idx, effectiveStyle, aspectRatio, dialogueLanguage),
-    }));
-
-    setStoryBible(bibleResult);
-    setScenes(finalScenes);
-    setIsGenerating(false);
-    setGenerationStep('');
-
-    // Auto save to projects
-    const newProj: ProjectData = {
-      id: projectId,
-      title: bibleResult.title || projectTitle,
-      idea: storyIdea,
-      sceneCount,
-      visualStyle,
-      customStyle,
-      aspectRatio,
-      additionalRules,
-      dialogueLanguage,
-      bible: bibleResult,
-      scenes: finalScenes,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    saveProjectToStorage(newProj);
-    setSavedProjects(loadProjectsFromStorage());
-
-    // Scroll to results
-    setTimeout(() => {
-      document.getElementById('productionResults')?.scrollIntoView({ behavior: 'smooth' });
-    }, 250);
   };
 
   const handleReapplyBible = () => {
@@ -350,8 +317,8 @@ export default function App() {
     setScenes(updated);
   };
 
-  const handleSaveCurrentProject = () => {
-    if (!storyBible) return;
+  const handleSaveCurrentProject = async () => {
+    if (!storyBible || !currentUserId) return;
     const proj: ProjectData = {
       id: projectId,
       title: projectTitle || storyBible.title,
@@ -367,9 +334,13 @@ export default function App() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    saveProjectToStorage(proj);
-    setSavedProjects(loadProjectsFromStorage());
-    showToast(`Proyek "${proj.title}" berhasil disimpan.`);
+    try {
+      await saveCloudProject(proj, currentUserId);
+      await refreshCloudProjects(currentUserId);
+      showToast(`Proyek "${proj.title}" berhasil disimpan ke cloud.`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Gagal menyimpan proyek.');
+    }
   };
 
   const handleLoadProject = (p: ProjectData) => {
@@ -388,11 +359,15 @@ export default function App() {
     showToast(`Proyek "${p.title}" dimuat ke Studio.`);
   };
 
-  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
+  const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteProjectFromStorage(id);
-    setSavedProjects(loadProjectsFromStorage());
-    showToast('Proyek berhasil dihapus dari koleksi.');
+    try {
+      await deleteCloudProject(id);
+      if (currentUserId) await refreshCloudProjects(currentUserId);
+      showToast('Proyek berhasil dihapus dari koleksi cloud.');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Gagal menghapus proyek.');
+    }
   };
 
   const handleNewProject = () => {
@@ -516,133 +491,59 @@ export default function App() {
     },
   ];
 
-  // Helper for status badge in nav
-  const getStatusDisplay = () => {
-    if (settings.mode === 'local') {
-      return {
-        label: 'Local Mode',
-        dotClass: 'bg-neutral-500',
-        textClass: 'text-neutral-600',
-      };
-    }
-    if (connStatus.state === 'success') {
-      return {
-        label: 'AI Connected',
-        dotClass: 'bg-emerald-500',
-        textClass: 'text-emerald-700',
-      };
-    }
-    if (connStatus.state === 'testing') {
-      return {
-        label: 'Checking...',
-        dotClass: 'bg-amber-500 animate-pulse',
-        textClass: 'text-amber-700',
-      };
-    }
-    if (connStatus.state === 'error') {
-      return {
-        label: 'Connection Error',
-        dotClass: 'bg-rose-500',
-        textClass: 'text-rose-700',
-      };
-    }
-    return {
-      label: 'AI Ready',
-      dotClass: 'bg-emerald-500',
-      textClass: 'text-neutral-600',
-    };
-  };
+  // Local engine status badge
+  const getStatusDisplay = () => ({
+    label: 'Local Engine',
+    dotClass: 'bg-emerald-500',
+    textClass: 'text-emerald-700',
+  });
 
   // =========================================================================
-  // RENDER: PASSWORD GATE (AUTHENTICATION SCREEN)
+  // RENDER: SUPABASE AUTHENTICATION
   // =========================================================================
   if (isAuthenticated === false || isAuthenticated === null) {
     return (
       <div className="min-h-screen bg-[#f7f6f2] text-[#141619] antialiased flex flex-col justify-between p-6">
         <header className="max-w-md mx-auto w-full pt-4 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#ff5a1f] text-white font-bold text-sm flex items-center justify-center">
-              A
-            </div>
-            <span className="font-semibold text-base tracking-tight text-[#141619]">
-              AICRATIVE
-            </span>
+            <div className="w-7 h-7 rounded-lg bg-[#ff5a1f] text-white font-bold text-sm flex items-center justify-center">A</div>
+            <span className="font-semibold text-base tracking-tight">AICRATIVE</span>
           </div>
-          <span className="text-xs text-[#73767c]">
-            Secure Gateway
-          </span>
+          <span className="text-xs text-[#73767c]">Creative Studio</span>
         </header>
-
         <div className="max-w-sm w-full mx-auto my-auto py-8">
-          <div className="p-7 rounded-2xl bg-white border border-[#e6e4dc] shadow-sm space-y-6">
+          <div className="p-7 rounded-2xl bg-white border border-[#e6e4dc] shadow-sm space-y-5">
             <div className="space-y-1.5 text-center">
               <div className="w-10 h-10 rounded-xl bg-[#fff0e8] text-[#ff5a1f] mx-auto flex items-center justify-center mb-3">
                 <Lock className="w-5 h-5" />
               </div>
-              <h1 className="text-xl font-semibold tracking-tight text-[#141619]">
-                AICRATIVE Studio
-              </h1>
-              <p className="text-xs text-[#73767c] leading-relaxed">
-                Masukkan password untuk mengakses workspace studio.
-              </p>
+              <h1 className="text-xl font-semibold tracking-tight">AICRATIVE Studio</h1>
+              <p className="text-xs text-[#73767c] leading-relaxed">Buat akun gratis atau masuk untuk menyimpan proyek di cloud.</p>
             </div>
-
-            {authError && (
-              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <span className="leading-relaxed">{authError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-[#f7f6f2]">
+              <button type="button" onClick={() => { setAuthMode('login'); setAuthError(null); setAuthNotice(null); }} className={`py-2 rounded-md text-xs font-medium ${authMode === 'login' ? 'bg-white shadow-sm text-[#141619]' : 'text-[#73767c]'}`}>Masuk</button>
+              <button type="button" onClick={() => { setAuthMode('register'); setAuthError(null); setAuthNotice(null); }} className={`py-2 rounded-md text-xs font-medium ${authMode === 'register' ? 'bg-white shadow-sm text-[#141619]' : 'text-[#73767c]'}`}>Daftar gratis</button>
+            </div>
+            {authError && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><span className="leading-relaxed">{authError}</span></div>}
+            {authNotice && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">{authNotice}</div>}
+            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+              {authMode === 'register' && <div><label className="text-xs font-medium block mb-1.5">Nama tampilan</label><input type="text" value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="Nama Anda" autoComplete="name" className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" /></div>}
+              <div><label className="text-xs font-medium block mb-1.5">Email</label><input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="nama@email.com" autoComplete="email" required className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" /></div>
               <div>
-                <label className="text-xs font-medium text-[#141619] block mb-1.5">
-                  Password Akses
-                </label>
+                <label className="text-xs font-medium block mb-1.5">Password</label>
                 <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="Masukkan password..."
-                    autoFocus
-                    className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f] focus:ring-1 focus:ring-[#ff5a1f] transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#73767c] hover:text-[#141619]"
-                    title={showPassword ? 'Sembunyikan' : 'Tampilkan'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  <input type={showPassword ? 'text' : 'password'} value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Minimal 6 karakter" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} minLength={6} required className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#73767c]">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
                 </div>
               </div>
-
-              <button
-                type="submit"
-                disabled={isVerifyingAuth}
-                className="w-full py-2.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e64a12] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isVerifyingAuth ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Memverifikasi...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Masuk ke Studio</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+              <button type="submit" disabled={isVerifyingAuth} className="w-full py-2.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e64a12] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
+                {isVerifyingAuth ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Memproses...</span></> : <><span>{authMode === 'register' ? 'Buat akun gratis' : 'Masuk ke Studio'}</span><ArrowRight className="w-4 h-4" /></>}
               </button>
             </form>
+            <p className="text-[11px] text-[#8c8f95] text-center">Akun gratis. Prompt dibuat secara lokal tanpa API AI eksternal.</p>
           </div>
         </div>
-
-        <footer className="max-w-md mx-auto w-full pb-4 text-center text-xs text-[#8c8f95]">
-          © AICRATIVE AI Creative Production Studio
-        </footer>
+        <footer className="max-w-md mx-auto w-full pb-4 text-center text-xs text-[#8c8f95]">© AICRATIVE AI Creative Production Studio</footer>
       </div>
     );
   }
@@ -1569,7 +1470,7 @@ export default function App() {
                   Koleksi Proyek
                 </h1>
                 <p className="text-xs text-[#73767c] mt-0.5">
-                  Proyek cerita yang Anda simpan di memori browser.
+                  Proyek cerita tersimpan aman di akun cloud Anda.
                 </p>
               </div>
 
@@ -1717,117 +1618,34 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================== TAB 4: AI ENGINE SETTINGS ==================== */}
+        {/* ==================== TAB 4: LOCAL CREATIVE ENGINE ==================== */}
         {activeTab === 'engine' && (
           <div className="space-y-5 max-w-3xl mx-auto">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight text-[#141619]">
-                Pengaturan AI Engine
-              </h1>
+              <h1 className="text-xl font-semibold tracking-tight text-[#141619]">Local Creative Engine</h1>
               <p className="text-xs text-[#73767c] mt-0.5">
-                Konfigurasi backend proxy dan mode eksekusi generator.
+                Mesin prompt berbasis aturan, preset, template, dan komposisi lokal. Tidak menggunakan API AI eksternal.
               </p>
             </div>
-
-            {/* Service Status Card */}
-            <div className="p-5 rounded-xl bg-white border border-[#e6e4dc]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${status.dotClass}`} />
-                    <h3 className="text-sm font-semibold text-[#141619]">
-                      Backend Status: {status.label}
-                    </h3>
+            <div className="p-5 rounded-xl bg-white border border-[#e6e4dc] space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <h3 className="text-sm font-semibold text-[#141619]">Engine siap digunakan</h3>
+              </div>
+              <p className="text-xs text-[#73767c] leading-relaxed">
+                Semua proses Character, Story, Scene, Image Prompt, dan Video Prompt berjalan langsung di browser. Tidak ada request generasi ke xKiro, Gemini, OpenAI, atau provider AI lainnya.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {['Character Identity & Lock','Story Bible & Story Arc','Scene Builder','Image Prompt Composer','Video Prompt, Camera & Sound'].map((item) => (
+                  <div key={item} className="rounded-lg border border-[#e6e4dc] bg-[#faf9f6] p-3 flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>{item}</span>
                   </div>
-                  <p className="text-xs text-[#73767c]">
-                    {connStatus.message}
-                  </p>
-                  {connStatus.latencyMs && (
-                    <span className="text-xs text-emerald-700 font-medium block">
-                      Waktu respon: {connStatus.latencyMs} ms
-                    </span>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handlePingEngine}
-                  disabled={connStatus.state === 'testing'}
-                  className="px-3.5 py-2 rounded-lg bg-[#181a1d] hover:bg-black text-white text-xs font-medium transition-colors shrink-0 flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${connStatus.state === 'testing' ? 'animate-spin' : ''}`} />
-                  <span>Uji Koneksi</span>
-                </button>
+                ))}
               </div>
-            </div>
-
-            {/* Mode Selector */}
-            <div className="p-5 rounded-xl bg-white border border-[#e6e4dc] space-y-3.5">
-              <h3 className="text-sm font-semibold text-[#141619]">
-                Mode Eksekusi Generator
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div
-                  onClick={() => setSettings({ ...settings, mode: 'auto' })}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    settings.mode === 'auto'
-                      ? 'border-[#ff5a1f] bg-[#fff0e8]/40 ring-1 ring-[#ff5a1f]'
-                      : 'border-[#e6e4dc] bg-white hover:border-[#dcd9d0]'
-                  }`}
-                >
-                  <strong className="text-xs font-semibold block text-[#141619]">Otomatis (Hybrid)</strong>
-                  <p className="text-[11px] text-[#73767c] mt-1 leading-relaxed">
-                    Prioritaskan Cloud AI xKiro, otomatis fallback ke Localbase jika terjadi gangguan internet/kuota.
-                  </p>
-                </div>
-
-                <div
-                  onClick={() => setSettings({ ...settings, mode: 'supabase' })}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    settings.mode === 'supabase'
-                      ? 'border-[#ff5a1f] bg-[#fff0e8]/40 ring-1 ring-[#ff5a1f]'
-                      : 'border-[#e6e4dc] bg-white hover:border-[#dcd9d0]'
-                  }`}
-                >
-                  <strong className="text-xs font-semibold block text-[#141619]">Cloud AI Saja</strong>
-                  <p className="text-[11px] text-[#73767c] mt-1 leading-relaxed">
-                    Semua generasi wajib menggunakan backend Cloud AI. Menampilkan error jelas jika provider offline.
-                  </p>
-                </div>
-
-                <div
-                  onClick={() => setSettings({ ...settings, mode: 'local' })}
-                  className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    settings.mode === 'local'
-                      ? 'border-[#ff5a1f] bg-[#fff0e8]/40 ring-1 ring-[#ff5a1f]'
-                      : 'border-[#e6e4dc] bg-white hover:border-[#dcd9d0]'
-                  }`}
-                >
-                  <strong className="text-xs font-semibold block text-[#141619]">Localbase Saja</strong>
-                  <p className="text-[11px] text-[#73767c] mt-1 leading-relaxed">
-                    Eksekusi instan 100% lokal berbasis template teruji tanpa panggilan internet ke provider.
-                  </p>
-                </div>
-              </div>
-
-              {/* Model Choice */}
-              <div className="pt-2">
-                <label className="text-xs font-medium text-[#141619] block mb-1">
-                  Model AI (Divalidasi Allowlist Server)
-                </label>
-                <select
-                  value={settings.model}
-                  onChange={(e) => setSettings({ ...settings, model: e.target.value })}
-                  className="w-full p-2.5 rounded-lg border border-[#dcd9d0] text-xs bg-white focus:outline-hidden focus:border-[#ff5a1f]"
-                >
-                  {AVAILABLE_MODELS.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <p className="text-[11px] text-[#8c8f95]">
+                Catatan: engine lokal menyusun hasil dari logika dan template terprogram. Engine ini tidak menjalankan model bahasa besar dan tidak membuat file gambar/video.
+              </p>
             </div>
           </div>
         )}
