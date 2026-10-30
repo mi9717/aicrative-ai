@@ -34,25 +34,26 @@ import {
   CheckCheck
 } from 'lucide-react';
 
-import { SceneData, StoryBible, ConnectionSettings, ConnectionStatus, ProjectData } from './types';
+import { SceneData, StoryBible, ProjectData } from './types';
 import {
-  loginWithPassword,
-  checkAuthSession,
-  logoutSession,
   buildImagePrompt,
   buildVideoPrompt,
   buildMasterCharacterReferenceSheet,
   formatPromptForTool,
-  loadProjectsFromStorage,
-  saveProjectToStorage,
-  deleteProjectFromStorage,
 } from './services/supabaseAicrative';
+import { getCurrentUser, signIn, signOut, signUp } from './services/supabaseAuth';
+import { clearLegacyLocalProjects, deleteCloudProject, listCloudProjects, readLegacyLocalProjects, saveCloudProject } from './services/projectCloud';
 import { generateLocalCreativeProject } from './engines';
 
 export default function App() {
   // Authentication & Gate State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [passwordInput, setPasswordInput] = useState<string>('');
+  const [emailInput, setEmailInput] = useState<string>('');
+  const [displayNameInput, setDisplayNameInput] = useState<string>('');
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isVerifyingAuth, setIsVerifyingAuth] = useState<boolean>(false);
@@ -61,8 +62,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'studio' | 'projects' | 'guide' | 'engine'>('studio');
 
   // Connection settings
-  const [settings] = useState<ConnectionSettings>({ model: 'local-creative-engine', mode: 'local' });
-
   const [connStatus, setConnStatus] = useState<ConnectionStatus>({
     state: 'idle',
     message: 'AICRATIVE Server Engine terhubung.',
@@ -102,12 +101,37 @@ export default function App() {
   }, []);
 
   const checkInitialAuth = async () => {
-    const valid = await checkAuthSession();
-    setIsAuthenticated(valid);
-    if (valid) {
-      handlePingEngine();
-      setSavedProjects(loadProjectsFromStorage());
-      initSampleProject();
+    try {
+      const user = await getCurrentUser();
+      setIsAuthenticated(!!user);
+      setCurrentUserId(user?.id || null);
+      if (user) {
+        handlePingEngine();
+        await refreshCloudProjects(user.id);
+        initSampleProject();
+      }
+    } catch (error) {
+      setIsAuthenticated(false);
+      setAuthError(error instanceof Error ? error.message : 'Gagal memeriksa sesi.');
+    }
+  };
+
+  const refreshCloudProjects = async (userId: string) => {
+    try {
+      let projects = await listCloudProjects();
+      if (projects.length === 0) {
+        const legacy = readLegacyLocalProjects();
+        for (const project of legacy) await saveCloudProject(project, userId);
+        if (legacy.length) {
+          clearLegacyLocalProjects();
+          projects = await listCloudProjects();
+          setToastMessage('Proyek lama berhasil dipindahkan ke akun cloud.');
+        }
+      }
+      setSavedProjects(projects);
+    } catch (error) {
+      console.error('Cloud project loading failed:', error);
+      setAuthError(error instanceof Error ? error.message : 'Gagal memuat proyek cloud.');
     }
   };
 
@@ -144,39 +168,58 @@ export default function App() {
 
   const effectiveStyle = visualStyle === 'Other' && customStyle.trim() ? customStyle.trim() : visualStyle;
 
-  // Handle password gate submit
+  // Supabase email/password authentication
   const handleLoginSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!passwordInput.trim()) {
-      setAuthError('Silakan masukkan password akses.');
+    setAuthError(null);
+    setAuthNotice(null);
+    if (!emailInput.trim() || !passwordInput) {
+      setAuthError('Masukkan email dan password.');
       return;
     }
-
-    setAuthError(null);
+    if (authMode === 'register' && !displayNameInput.trim()) {
+      setAuthError('Masukkan nama tampilan.');
+      return;
+    }
     setIsVerifyingAuth(true);
-
-    const result = await loginWithPassword(passwordInput);
-    setIsVerifyingAuth(false);
-
-    if (result.success) {
-      setIsAuthenticated(true);
+    try {
+      if (authMode === 'register') {
+        const result = await signUp(emailInput.trim(), passwordInput, displayNameInput.trim());
+        if (!result.session) {
+          setAuthNotice(result.message);
+          setAuthMode('login');
+        } else {
+          setIsAuthenticated(true);
+          setCurrentUserId(result.session.user.id);
+          await refreshCloudProjects(result.session.user.id);
+          initSampleProject();
+          showToast('Akun AICRATIVE berhasil dibuat.');
+        }
+      } else {
+        const session = await signIn(emailInput.trim(), passwordInput);
+        setIsAuthenticated(true);
+        setCurrentUserId(session.user.id);
+        await refreshCloudProjects(session.user.id);
+        initSampleProject();
+        handlePingEngine();
+        showToast('Berhasil masuk ke AICRATIVE.');
+      }
       setPasswordInput('');
-      showToast('Autentikasi berhasil. Selamat datang di AICRATIVE.');
-      handlePingEngine();
-      setSavedProjects(loadProjectsFromStorage());
-      initSampleProject();
-    } else {
-      setAuthError(result.error || 'Password salah. Akses ditolak.');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Autentikasi gagal.');
+    } finally {
+      setIsVerifyingAuth(false);
     }
   };
 
-  // Handle user logout
   const handleLogout = async () => {
-    await logoutSession();
+    await signOut();
     setIsAuthenticated(false);
+    setCurrentUserId(null);
+    setSavedProjects([]);
     setPasswordInput('');
     setAuthError(null);
-    showToast('Sesi telah diakhiri.');
+    showToast('Anda telah keluar dari akun.');
   };
 
   // Local Creative Engine runs in the browser; no provider connection is required.
@@ -238,8 +281,10 @@ export default function App() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      saveProjectToStorage(newProj);
-      setSavedProjects(loadProjectsFromStorage());
+      if (currentUserId) {
+        await saveCloudProject(newProj, currentUserId);
+        await refreshCloudProjects(currentUserId);
+      }
       showToast('Character, Story, Scene, Image Prompt, dan Video Prompt berhasil dibuat secara lokal.');
       setTimeout(() => {
         document.getElementById('productionResults')?.scrollIntoView({ behavior: 'smooth' });
@@ -273,8 +318,8 @@ export default function App() {
     setScenes(updated);
   };
 
-  const handleSaveCurrentProject = () => {
-    if (!storyBible) return;
+  const handleSaveCurrentProject = async () => {
+    if (!storyBible || !currentUserId) return;
     const proj: ProjectData = {
       id: projectId,
       title: projectTitle || storyBible.title,
@@ -290,9 +335,13 @@ export default function App() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    saveProjectToStorage(proj);
-    setSavedProjects(loadProjectsFromStorage());
-    showToast(`Proyek "${proj.title}" berhasil disimpan.`);
+    try {
+      await saveCloudProject(proj, currentUserId);
+      await refreshCloudProjects(currentUserId);
+      showToast(`Proyek "${proj.title}" berhasil disimpan ke cloud.`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Gagal menyimpan proyek.');
+    }
   };
 
   const handleLoadProject = (p: ProjectData) => {
@@ -311,11 +360,15 @@ export default function App() {
     showToast(`Proyek "${p.title}" dimuat ke Studio.`);
   };
 
-  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
+  const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteProjectFromStorage(id);
-    setSavedProjects(loadProjectsFromStorage());
-    showToast('Proyek berhasil dihapus dari koleksi.');
+    try {
+      await deleteCloudProject(id);
+      if (currentUserId) await refreshCloudProjects(currentUserId);
+      showToast('Proyek berhasil dihapus dari koleksi cloud.');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Gagal menghapus proyek.');
+    }
   };
 
   const handleNewProject = () => {
