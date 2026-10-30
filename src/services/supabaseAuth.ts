@@ -1,0 +1,89 @@
+type SupabaseSession = {
+  access_token: string;
+  refresh_token: string;
+  expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
+  user: SupabaseUser;
+};
+export type SupabaseUser = { id: string; email?: string; user_metadata?: Record<string, unknown> };
+
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SESSION_KEY = 'aicrative_supabase_session_v1';
+
+function configError() {
+  return !SUPABASE_URL || !SUPABASE_KEY
+    ? 'Konfigurasi Supabase belum lengkap. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di environment Vercel.'
+    : null;
+}
+function readSession(): SupabaseSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) as SupabaseSession : null;
+  } catch { return null; }
+}
+function saveSession(session: SupabaseSession | null) {
+  if (!session) localStorage.removeItem(SESSION_KEY);
+  else {
+    const expiresAt = session.expires_at || Math.floor(Date.now() / 1000) + (session.expires_in || 3600);
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, expires_at: expiresAt }));
+  }
+}
+async function authRequest(path: string, body?: unknown, method = 'POST', token?: string) {
+  const missing = configError();
+  if (missing) throw new Error(missing);
+  const response = await fetch(SUPABASE_URL + '/auth/v1/' + path, {
+    method,
+    headers: {
+      apikey: SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {}),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || data.error || 'Autentikasi Supabase gagal.');
+  return data;
+}
+
+export async function signUp(email: string, password: string, displayName: string) {
+  const data = await authRequest('signup', { email, password, data: { display_name: displayName } });
+  if (data.access_token) saveSession(data as SupabaseSession);
+  return { session: data.access_token ? data as SupabaseSession : null, message: data.access_token ? 'Akun berhasil dibuat.' : 'Akun dibuat. Periksa email untuk verifikasi sebelum masuk.' };
+}
+export async function signIn(email: string, password: string): Promise<SupabaseSession> {
+  const data = await authRequest('token?grant_type=password', { email, password });
+  saveSession(data as SupabaseSession);
+  return data as SupabaseSession;
+}
+export async function getAccessToken(): Promise<string> {
+  const session = readSession();
+  if (!session) throw new Error('Sesi berakhir. Silakan masuk kembali.');
+  if ((session.expires_at || 0) > Math.floor(Date.now() / 1000) + 60) return session.access_token;
+  const refreshed = await authRequest('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
+  saveSession(refreshed as SupabaseSession);
+  return (refreshed as SupabaseSession).access_token;
+}
+export async function getCurrentUser(): Promise<SupabaseUser | null> {
+  const session = readSession();
+  if (!session) return null;
+  try {
+    const token = await getAccessToken();
+    const user = await authRequest('user', undefined, 'GET', token);
+    return user as SupabaseUser;
+  } catch {
+    saveSession(null);
+    return null;
+  }
+}
+export async function signOut() {
+  const session = readSession();
+  try {
+    if (session) {
+      const token = await getAccessToken();
+      await authRequest('logout', undefined, 'POST', token);
+    }
+  } catch { /* local session is still cleared */ }
+  saveSession(null);
+}
