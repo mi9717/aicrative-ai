@@ -10,9 +10,10 @@ function digest(value) {
   return createHash('sha256').update(value).digest();
 }
 
-function signature(signingSecret, issuedAt) {
+function signature(signingSecret, password, issuedAt) {
+  const passwordFingerprint = createHash('sha256').update(password).digest('hex');
   return createHmac('sha256', signingSecret)
-    .update('aicrative-shared-access-v3:' + issuedAt)
+    .update('aicrative-shared-access-v3:' + passwordFingerprint + ':' + issuedAt)
     .digest('hex');
 }
 
@@ -51,7 +52,7 @@ function clearAttempts(clientKey) {
   attemptsByClient.delete(clientKey);
 }
 
-function validCookie(req, signingSecret, nowSeconds = Math.floor(Date.now() / 1000)) {
+function validCookie(req, signingSecret, password, nowSeconds = Math.floor(Date.now() / 1000)) {
   const cookies = (req.headers.cookie || '').split(';').map(value => value.trim());
   const item = cookies.find(value => value.startsWith(COOKIE_NAME + '='));
   if (!item) return false;
@@ -64,7 +65,7 @@ function validCookie(req, signingSecret, nowSeconds = Math.floor(Date.now() / 10
     return false;
   }
 
-  const expected = signature(signingSecret, issuedAt);
+  const expected = signature(signingSecret, password, issuedAt);
   const actualDigest = digest(supplied[1]);
   const expectedDigest = digest(expected);
   return timingSafeEqual(actualDigest, expectedDigest);
@@ -93,7 +94,7 @@ export function isSharedAccessAuthorized(req, nowSeconds = Math.floor(Date.now()
   const password = process.env.AICRATIVE_ACCESS_PASSWORD || '';
   const signingSecret = process.env.AICRATIVE_SESSION_SECRET || '';
   if (!password || signingSecret.length < 32) return false;
-  return validCookie(req, signingSecret, nowSeconds);
+  return validCookie(req, signingSecret, password, nowSeconds);
 }
 
 export function clearSharedAccessCookie(res) {
@@ -142,7 +143,7 @@ export default function handler(req, res) {
 
   clearAttempts(clientKey);
   const issuedAt = Math.floor(now / 1000);
-  const cookieValue = issuedAt + '.' + signature(signingSecret, issuedAt);
+  const cookieValue = issuedAt + '.' + signature(signingSecret, password, issuedAt);
   res.setHeader(
     'Set-Cookie',
     COOKIE_NAME + '=' + cookieValue + '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=' + COOKIE_TTL_SECONDS
