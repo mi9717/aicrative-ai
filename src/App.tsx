@@ -41,22 +41,17 @@ import {
   buildMasterCharacterReferenceSheet,
   formatPromptForTool,
 } from './services/supabaseAicrative';
-import { getCurrentUser, signIn, signOut, signUp } from './services/supabaseAuth';
+import { getCurrentUser, signOut } from './services/supabaseAuth';
 import { clearLegacyLocalProjects, deleteCloudProject, listCloudProjects, readLegacyLocalProjects, saveCloudProject } from './services/projectCloud';
 import { generateLocalCreativeProject } from './engines';
+
+const createProjectId = () => 'proj-' + (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Date.now() + '-' + Math.random().toString(36).slice(2));
 
 export default function App() {
   // Authentication & Gate State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [passwordInput, setPasswordInput] = useState<string>('');
-  const [emailInput, setEmailInput] = useState<string>('');
-  const [displayNameInput, setDisplayNameInput] = useState<string>('');
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [authNotice, setAuthNotice] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [isVerifyingAuth, setIsVerifyingAuth] = useState<boolean>(false);
 
   // Navigation tabs
   const [activeTab, setActiveTab] = useState<'studio' | 'projects' | 'guide' | 'engine'>('studio');
@@ -67,7 +62,7 @@ export default function App() {
   });
 
   // Story Project Parameters
-  const [projectId, setProjectId] = useState<string>(() => 'proj-' + Date.now());
+  const [projectId, setProjectId] = useState<string>(() => createProjectId());
   const [projectTitle, setProjectTitle] = useState<string>('Petualangan Murim: Kitab Terlarang');
   const [storyIdea, setStoryIdea] = useState<string>(
     'Saya ingin membuat cerita dunia Murim tentang seorang murid sekte yang dianggap lemah. Ia menemukan kitab bela diri kuno yang menyimpan teknik terlarang, lalu berkembang menjadi pendekar kuat dan menghadapi konflik antar-sekte.'
@@ -178,58 +173,13 @@ export default function App() {
 
   const effectiveStyle = visualStyle === 'Other' && customStyle.trim() ? customStyle.trim() : visualStyle;
 
-  // Supabase email/password authentication
-  const handleLoginSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setAuthError(null);
-    setAuthNotice(null);
-    if (!emailInput.trim() || !passwordInput) {
-      setAuthError('Masukkan email dan password.');
-      return;
-    }
-    if (authMode === 'register' && !displayNameInput.trim()) {
-      setAuthError('Masukkan nama tampilan.');
-      return;
-    }
-    setIsVerifyingAuth(true);
-    try {
-      if (authMode === 'register') {
-        const result = await signUp(emailInput.trim(), passwordInput, displayNameInput.trim());
-        if (!result.session) {
-          setAuthNotice(result.message);
-          setAuthMode('login');
-        } else {
-          setIsAuthenticated(true);
-          setCurrentUserId(result.session.user.id);
-          await refreshCloudProjects();
-          initSampleProject();
-          showToast('Akun AICRATIVE berhasil dibuat.');
-        }
-      } else {
-        const session = await signIn(emailInput.trim(), passwordInput);
-        setIsAuthenticated(true);
-        setCurrentUserId(session.user.id);
-        await refreshCloudProjects();
-        initSampleProject();
-        handlePingEngine();
-        showToast('Berhasil masuk ke AICRATIVE.');
-      }
-      setPasswordInput('');
-    } catch (error) {
-      setAuthError(error instanceof Error ? error.message : 'Autentikasi gagal.');
-    } finally {
-      setIsVerifyingAuth(false);
-    }
-  };
-
   const handleLogout = async () => {
-    await signOut();
-    setIsAuthenticated(false);
-    setCurrentUserId(null);
-    setSavedProjects([]);
-    setPasswordInput('');
-    setAuthError(null);
-    showToast('Anda telah keluar dari akun.');
+    try {
+      await signOut();
+      window.location.reload();
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Tidak dapat mengakhiri sesi akses.');
+    }
   };
 
   // Local Creative Engine runs in the browser; no provider connection is required.
@@ -383,7 +333,7 @@ export default function App() {
   };
 
   const handleNewProject = () => {
-    setProjectId('proj-' + Date.now());
+    setProjectId(createProjectId());
     setProjectTitle('Proyek Cerita Baru');
     setStoryIdea('');
     setStoryBible(null);
@@ -510,52 +460,22 @@ export default function App() {
     textClass: 'text-emerald-700',
   });
 
-  // =========================================================================
-  // RENDER: SUPABASE AUTHENTICATION
-  // =========================================================================
-  if (isAuthenticated === false || isAuthenticated === null) {
+  // The outer SharedAccessGate owns the single shared-password sign-in flow.
+  if (isAuthenticated !== true) {
     return (
-      <div className="min-h-screen bg-[#f7f6f2] text-[#141619] antialiased flex flex-col justify-between p-6">
-        <header className="max-w-md mx-auto w-full pt-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/aicrative-mark.svg" alt="" className="w-8 h-8 object-contain" />
-            <span className="font-extrabold text-base tracking-tight"><span className="text-[#FF7A00]">AI</span><span className="text-[#1F1F1F]">CRATIVE</span></span>
-          </div>
-          <span className="text-xs text-[#73767c]">Creative Studio</span>
-        </header>
-        <div className="max-w-sm w-full mx-auto my-auto py-8">
-          <div className="p-7 rounded-2xl bg-white border border-[#e6e4dc] shadow-sm space-y-5">
-            <div className="space-y-1.5 text-center">
-              <div className="w-10 h-10 rounded-xl bg-[#fff0e8] text-[#ff5a1f] mx-auto flex items-center justify-center mb-3">
-                <Lock className="w-5 h-5" />
-              </div>
-              <h1 className="text-xl font-semibold tracking-tight">AICRATIVE Studio</h1>
-              <p className="text-xs text-[#73767c] leading-relaxed">Buat akun gratis atau masuk untuk menyimpan proyek di cloud.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-[#f7f6f2]">
-              <button type="button" onClick={() => { setAuthMode('login'); setAuthError(null); setAuthNotice(null); }} className={`py-2 rounded-md text-xs font-medium ${authMode === 'login' ? 'bg-white shadow-sm text-[#141619]' : 'text-[#73767c]'}`}>Masuk</button>
-              <button type="button" onClick={() => { setAuthMode('register'); setAuthError(null); setAuthNotice(null); }} className={`py-2 rounded-md text-xs font-medium ${authMode === 'register' ? 'bg-white shadow-sm text-[#141619]' : 'text-[#73767c]'}`}>Daftar gratis</button>
-            </div>
-            {authError && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><span className="leading-relaxed">{authError}</span></div>}
-            {authNotice && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">{authNotice}</div>}
-            <form onSubmit={handleLoginSubmit} className="space-y-3.5">
-              {authMode === 'register' && <div><label className="text-xs font-medium block mb-1.5">Nama tampilan</label><input type="text" value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="Nama Anda" autoComplete="name" className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" /></div>}
-              <div><label className="text-xs font-medium block mb-1.5">Email</label><input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="nama@email.com" autoComplete="email" required className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" /></div>
-              <div>
-                <label className="text-xs font-medium block mb-1.5">Password</label>
-                <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Minimal 6 karakter" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} minLength={6} required className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#73767c]">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
-                </div>
-              </div>
-              <button type="submit" disabled={isVerifyingAuth} className="w-full py-2.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e64a12] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-                {isVerifyingAuth ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Memproses...</span></> : <><span>{authMode === 'register' ? 'Buat akun gratis' : 'Masuk ke Studio'}</span><ArrowRight className="w-4 h-4" /></>}
-              </button>
-            </form>
-            <p className="text-[11px] text-[#8c8f95] text-center">Akun gratis. Prompt dibuat secara lokal tanpa API AI eksternal.</p>
-          </div>
+      <div className="min-h-screen bg-[#f7f6f2] text-[#141619] antialiased flex items-center justify-center p-6">
+        <div className="max-w-sm w-full p-7 rounded-2xl bg-white border border-[#e6e4dc] shadow-sm text-center space-y-4">
+          <img src="/aicrative-mark.svg" alt="" className="w-10 h-10 object-contain mx-auto" />
+          <h1 className="text-lg font-semibold">AICRATIVE Workspace</h1>
+          <p className="text-sm text-[#73767c]" role="status">
+            {isAuthenticated === null ? 'Memeriksa akses workspace...' : (authError || 'Sesi akses berakhir. Masuk kembali menggunakan password bersama.')}
+          </p>
+          {isAuthenticated === false && (
+            <button type="button" onClick={() => window.location.reload()} className="w-full py-2.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e64a12] text-white text-sm font-medium">
+              Masuk kembali
+            </button>
+          )}
         </div>
-        <footer className="max-w-md mx-auto w-full pb-4 text-center text-xs text-[#8c8f95]">© AICRATIVE AI Creative Production Studio</footer>
       </div>
     );
   }
