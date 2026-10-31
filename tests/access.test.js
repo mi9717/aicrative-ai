@@ -38,6 +38,7 @@ test('returns 503 when shared access password is not configured', () => {
 
 test('rejects an incorrect password and does not issue a cookie', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  process.env.AICRATIVE_SESSION_SECRET = 'test-session-secret-that-is-long-enough-32';
   const res = createResponse();
   handler(request({ method: 'POST', body: { password: 'wrong' } }), res);
   assert.equal(res.statusCode, 401);
@@ -46,6 +47,7 @@ test('rejects an incorrect password and does not issue a cookie', () => {
 
 test('issues a signed, HttpOnly, secure, SameSite cookie for valid password', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  process.env.AICRATIVE_SESSION_SECRET = 'test-session-secret-that-is-long-enough-32';
   const res = createResponse();
   handler(request({ method: 'POST', body: { password: 'test-password' }, ip: '192.0.2.2' }), res);
   assert.equal(res.statusCode, 200);
@@ -57,6 +59,7 @@ test('issues a signed, HttpOnly, secure, SameSite cookie for valid password', ()
 
 test('accepts a valid cookie and rejects a modified cookie', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  process.env.AICRATIVE_SESSION_SECRET = 'test-session-secret-that-is-long-enough-32';
   const login = createResponse();
   handler(request({ method: 'POST', body: { password: 'test-password' }, ip: '192.0.2.3' }), login);
   const cookie = login.headers['Set-Cookie'].split(';')[0];
@@ -70,6 +73,7 @@ test('accepts a valid cookie and rejects a modified cookie', () => {
 
 test('rejects password submissions without an Origin header', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  process.env.AICRATIVE_SESSION_SECRET = 'test-session-secret-that-is-long-enough-32';
   const req = request({ method: 'POST', body: { password: 'test-password' }, ip: '192.0.2.6' });
   delete req.headers.origin;
   const res = createResponse();
@@ -79,6 +83,7 @@ test('rejects password submissions without an Origin header', () => {
 
 test('rejects oversized password input', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  process.env.AICRATIVE_SESSION_SECRET = 'test-session-secret-that-is-long-enough-32';
   const res = createResponse();
   handler(request({ method: 'POST', body: { password: 'x'.repeat(1025) }, ip: '192.0.2.7' }), res);
   assert.equal(res.statusCode, 400);
@@ -86,6 +91,7 @@ test('rejects oversized password input', () => {
 
 test('rejects cross-origin password submissions', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  process.env.AICRATIVE_SESSION_SECRET = 'test-session-secret-that-is-long-enough-32';
   const res = createResponse();
   handler(request({ method: 'POST', body: { password: 'test-password' }, origin: 'https://attacker.test', ip: '192.0.2.4' }), res);
   assert.equal(res.statusCode, 403);
@@ -93,6 +99,7 @@ test('rejects cross-origin password submissions', () => {
 
 test('rate-limits repeated failed password attempts per client', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  process.env.AICRATIVE_SESSION_SECRET = 'test-session-secret-that-is-long-enough-32';
   const ip = '192.0.2.5';
   for (let i = 0; i < 10; i += 1) {
     const res = createResponse();
@@ -107,6 +114,7 @@ test('rate-limits repeated failed password attempts per client', () => {
 
 test('rejects unsupported methods', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  process.env.AICRATIVE_SESSION_SECRET = 'test-session-secret-that-is-long-enough-32';
   const res = createResponse();
   handler(request({ method: 'DELETE' }), res);
   assert.equal(res.statusCode, 405);
