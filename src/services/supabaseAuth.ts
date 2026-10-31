@@ -46,16 +46,9 @@ async function authRequest(path: string, body?: unknown, method = 'POST', token?
   if (!response.ok) throw new Error(data.msg || data.message || data.error_description || data.error || 'Autentikasi Supabase gagal.');
   return data;
 }
-
-async function signInAnonymously(): Promise<SupabaseSession> {
-  const data = await authRequest('signup', { data: { display_name: 'AICRATIVE Guest' } });
-  if (!data.access_token) throw new Error('Supabase belum mengaktifkan Anonymous Sign-Ins. Aktifkan di Authentication > Sign In / Providers > Anonymous.');
-  saveSession(data as SupabaseSession);
-  return data as SupabaseSession;
-}
 export async function getAccessToken(): Promise<string> {
   const session = readSession();
-  if (!session) throw new Error('Sesi berakhir. Silakan muat ulang AICRATIVE.');
+  if (!session) throw new Error('Sesi berakhir. Silakan masuk kembali ke AICRATIVE.');
   if ((session.expires_at || 0) > Math.floor(Date.now() / 1000) + 60) return session.access_token;
   const refreshed = await authRequest('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
   saveSession(refreshed as SupabaseSession);
@@ -63,22 +56,27 @@ export async function getAccessToken(): Promise<string> {
 }
 export async function getCurrentUser(): Promise<SupabaseUser | null> {
   const session = readSession();
-  if (!session) return (await signInAnonymously()).user;
+  if (!session) return null;
   try {
     const token = await getAccessToken();
     const user = await authRequest('user', undefined, 'GET', token);
     return user as SupabaseUser;
   } catch {
     saveSession(null);
-    return (await signInAnonymously()).user;
+    return null;
   }
 }
 export async function signOut() {
-  window.location.reload();
+  try {
+    const token = await getAccessToken();
+    await authRequest('logout', undefined, 'POST', token);
+  } catch (error) {
+    // Always clear the local session, even if the remote session has expired.
+    console.warn('Supabase sign-out could not be confirmed:', error);
+  } finally {
+    saveSession(null);
+  }
 }
-
-/* Kept for backwards compatibility with the existing Studio component.
-   Shared-password users do not see the email registration screen. */
 export async function signUp(email: string, password: string, displayName: string) {
   const data = await authRequest('signup', { email, password, data: { display_name: displayName } });
   if (data.access_token) saveSession(data as SupabaseSession);
