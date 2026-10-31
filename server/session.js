@@ -106,11 +106,14 @@ export async function getValidSession(req, res, { verifyUser = false } = {}) {
         method: 'POST',
         body: { refresh_token: session.refresh_token },
       });
+      if (!refreshed.access_token || !refreshed.refresh_token) {
+        throw new Error('Supabase tidak mengembalikan sesi yang valid.');
+      }
       session = {
         access_token: refreshed.access_token,
         refresh_token: refreshed.refresh_token,
         expires_at: refreshed.expires_at || Math.floor(Date.now() / 1000) + (refreshed.expires_in || 3600),
-        user: refreshed.user,
+        user: refreshed.user || session.user,
       };
       writeSessionCookie(res, session);
     }
