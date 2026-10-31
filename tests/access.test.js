@@ -68,6 +68,22 @@ test('accepts a valid cookie and rejects a modified cookie', () => {
   assert.equal(invalid.statusCode, 401);
 });
 
+test('rejects password submissions without an Origin header', () => {
+  process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  const req = request({ method: 'POST', body: { password: 'test-password' }, ip: '192.0.2.6' });
+  delete req.headers.origin;
+  const res = createResponse();
+  handler(req, res);
+  assert.equal(res.statusCode, 403);
+});
+
+test('rejects oversized password input', () => {
+  process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  const res = createResponse();
+  handler(request({ method: 'POST', body: { password: 'x'.repeat(1025) }, ip: '192.0.2.7' }), res);
+  assert.equal(res.statusCode, 400);
+});
+
 test('rejects cross-origin password submissions', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
   const res = createResponse();
