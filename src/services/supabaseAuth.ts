@@ -1,89 +1,56 @@
-type SupabaseSession = {
-  access_token: string;
-  refresh_token: string;
-  expires_at?: number;
-  expires_in?: number;
-  token_type?: string;
-  user: SupabaseUser;
+export type SupabaseUser = {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
 };
-export type SupabaseUser = { id: string; email?: string; user_metadata?: Record<string, unknown> };
 
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-const SESSION_KEY = 'aicrative_supabase_session_v1';
+type AuthResponse = { user: SupabaseUser | null; message?: string };
 
-function configError() {
-  return !SUPABASE_URL || !SUPABASE_KEY
-    ? 'Konfigurasi Supabase belum lengkap. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di environment Vercel.'
-    : null;
-}
-function readSession(): SupabaseSession | null {
+if (typeof window !== 'undefined') {
   try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) as SupabaseSession : null;
-  } catch { return null; }
-}
-function saveSession(session: SupabaseSession | null) {
-  if (!session) localStorage.removeItem(SESSION_KEY);
-  else {
-    const expiresAt = session.expires_at || Math.floor(Date.now() / 1000) + (session.expires_in || 3600);
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, expires_at: expiresAt }));
+    // Remove the previous browser-stored Supabase tokens. The new session is HttpOnly.
+    localStorage.removeItem('aicrative_supabase_session_v1');
+  } catch {
+    // Storage may be unavailable in privacy-restricted browser contexts.
   }
 }
-async function authRequest(path: string, body?: unknown, method = 'POST', token?: string) {
-  const missing = configError();
-  if (missing) throw new Error(missing);
-  const response = await fetch(SUPABASE_URL + '/auth/v1/' + path, {
+
+async function authRequest(body?: Record<string, string>, method = 'GET'): Promise<AuthResponse> {
+  const response = await fetch('/api/auth', {
     method,
-    headers: {
-      apikey: SUPABASE_KEY,
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: 'Bearer ' + token } : {}),
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    credentials: 'same-origin',
+    cache: 'no-store',
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.msg || data.message || data.error_description || data.error || 'Autentikasi Supabase gagal.');
-  return data;
+  if (!response.ok) throw new Error(data.message || 'Autentikasi AICRATIVE gagal.');
+  return data as AuthResponse;
 }
-export async function getAccessToken(): Promise<string> {
-  const session = readSession();
-  if (!session) throw new Error('Sesi berakhir. Silakan masuk kembali ke AICRATIVE.');
-  if ((session.expires_at || 0) > Math.floor(Date.now() / 1000) + 60) return session.access_token;
-  const refreshed = await authRequest('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
-  saveSession(refreshed as SupabaseSession);
-  return (refreshed as SupabaseSession).access_token;
-}
+
 export async function getCurrentUser(): Promise<SupabaseUser | null> {
-  const session = readSession();
-  if (!session) return null;
-  try {
-    const token = await getAccessToken();
-    const user = await authRequest('user', undefined, 'GET', token);
-    return user as SupabaseUser;
-  } catch {
-    saveSession(null);
-    return null;
-  }
+  const result = await authRequest();
+  return result.user;
 }
-export async function signOut() {
+
+export async function signOut(): Promise<void> {
   try {
-    const token = await getAccessToken();
-    await authRequest('logout', undefined, 'POST', token);
+    await authRequest({ action: 'logout' }, 'POST');
   } catch (error) {
-    // Always clear the local session, even if the remote session has expired.
-    console.warn('Supabase sign-out could not be confirmed:', error);
-  } finally {
-    saveSession(null);
+    console.warn('AICRATIVE sign-out could not be confirmed:', error);
   }
 }
+
 export async function signUp(email: string, password: string, displayName: string) {
-  const data = await authRequest('signup', { email, password, data: { display_name: displayName } });
-  if (data.access_token) saveSession(data as SupabaseSession);
-  return { session: data.access_token ? data as SupabaseSession : null, message: 'Periksa email untuk verifikasi.' };
+  const result = await authRequest({ action: 'register', email, password, displayName }, 'POST');
+  return {
+    session: result.user ? { user: result.user } : null,
+    message: result.message || 'Periksa email untuk verifikasi.',
+  };
 }
-export async function signIn(email: string, password: string): Promise<SupabaseSession> {
-  const data = await authRequest('token?grant_type=password', { email, password });
-  saveSession(data as SupabaseSession);
-  return data as SupabaseSession;
+
+export async function signIn(email: string, password: string): Promise<{ user: SupabaseUser }> {
+  const result = await authRequest({ action: 'login', email, password }, 'POST');
+  if (!result.user) throw new Error('Login tidak menghasilkan sesi aktif.');
+  return { user: result.user };
 }
