@@ -24,10 +24,16 @@ AICRATIVE is a browser-based creative prompt studio. Character, Story, Scene, Im
 ## Data and security
 
 - Each signed-in account can only access its own project rows. PostgreSQL Row Level Security (RLS) enforces this using `auth.uid() = user_id`.
-- A fresh browser session now opens the email sign-in/registration screen instead of silently creating an anonymous Supabase account.
+- A fresh browser session opens the email sign-in/registration screen instead of silently creating an anonymous Supabase account.
 - The browser uses only the Supabase Publishable/anon key and the signed-in user's access token. Never put a service-role key in Vercel variables prefixed with `VITE_`.
 - Existing projects saved in the old browser `localStorage` are imported to the first signed-in account when that account has no cloud projects. Keep a backup of browser data until migration is confirmed.
 - Local Creative Engine processing happens in the browser. Supabase is used for authentication and cloud project storage only; it is not an AI provider.
+- After the initial schema migration, also run `supabase/migrations/202610310001_security_hardening.sql` in the Supabase SQL Editor. It revokes anonymous table access and restricts execution of the profile bootstrap trigger function.
+- Vercel applies baseline security headers for content sniffing, framing, referrer leakage, browser permissions, and HTTPS transport.
+
+## Known security boundary
+
+Supabase access and refresh tokens are currently stored in browser `localStorage`. This is still exposed to JavaScript executing on the same origin, so an XSS vulnerability could steal a session. The current frontend-only architecture cannot make those tokens HttpOnly. A proper fix requires a server-side authentication/BFF layer that owns the session and issues Secure, HttpOnly, SameSite cookies. Do not treat the shared studio password as a replacement for that work.
 
 ## Run locally
 
@@ -45,4 +51,5 @@ Build check:
 ```bash
 npm run build
 npm run lint
+npm test
 ```
