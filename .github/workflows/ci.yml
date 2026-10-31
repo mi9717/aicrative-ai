@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -15,9 +18,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+      - name: Unit tests
+        run: npm test
       - name: Type check
         run: npm run lint
-      - name: Build
+      - name: Production build
         run: npm run build
