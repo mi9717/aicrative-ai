@@ -108,7 +108,7 @@ test('BFF projects derives user_id from encrypted session, not client payload', 
       const options = global.__lastFetchOptions;
       const payload = JSON.parse(options.body);
       assert.equal(payload.user_id, 'user-123');
-      assert.equal(payload.user_id, 'attacker-controlled-user');
+      assert.notEqual(payload.user_id, 'attacker-controlled-user');
       return jsonResponse(null, 201);
     }
     throw new Error('Unexpected upstream request: ' + url);
