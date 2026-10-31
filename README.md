@@ -38,6 +38,8 @@ npm install
 npm run dev
 ```
 
+The Vite development server serves the frontend only. To test the Vercel `/api/access` serverless function locally, use `npx vercel dev` after configuring the server-only environment variables.
+
 Build check:
 
 ```bash
