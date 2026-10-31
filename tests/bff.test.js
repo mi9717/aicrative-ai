@@ -64,10 +64,11 @@ test('BFF auth login stores encrypted HttpOnly cookie and never returns tokens',
   assert.equal(res.body.user.id, 'user-123');
   assert.equal(JSON.stringify(res.body).includes('access-token-secret'), false);
   assert.equal(JSON.stringify(res.body).includes('refresh-token-secret'), false);
-  assert.match(res.headers['Set-Cookie'], /^aicrative_session=/);
+  assert.match(res.headers['Set-Cookie'], /^__Host-aicrative_session=/);
   assert.match(res.headers['Set-Cookie'], /HttpOnly/);
   assert.match(res.headers['Set-Cookie'], /Secure/);
   assert.match(res.headers['Set-Cookie'], /SameSite=Lax/);
+  assert.equal(res.headers['Set-Cookie'].includes('access-token-secret'), false);
 });
 
 test('BFF auth rejects cross-origin login requests', async () => {
@@ -151,7 +152,7 @@ test('BFF projects requires an authenticated encrypted session', async () => {
   assert.equal(res.statusCode, 401);
 });
 
-test('BFF auth clears an invalid or absent session without returning a token', async () => {
+test('BFF auth returns unauthenticated for an absent session', async () => {
   configure();
   const res = response();
   await authHandler(req(), res);
