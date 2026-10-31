@@ -1,3 +1,12 @@
+if (typeof window !== 'undefined') {
+  try {
+    // Remove legacy browser-stored Supabase tokens from the previous per-user auth flow.
+    localStorage.removeItem('aicrative_supabase_session_v1');
+  } catch {
+    // Storage may be unavailable in privacy-restricted browser contexts.
+  }
+}
+
 export type SupabaseUser = {
   id: string;
   user_metadata?: Record<string, unknown>;
