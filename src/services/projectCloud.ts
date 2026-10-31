@@ -12,6 +12,9 @@ async function request(path = '/api/projects', init: RequestInit = {}) {
       ...(init.headers || {}),
     },
   });
+  if (response.status === 401 && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('aicrative-session-expired'));
+  }
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.message || 'Gagal mengakses penyimpanan proyek.');
