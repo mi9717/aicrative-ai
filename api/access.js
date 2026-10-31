@@ -25,6 +25,11 @@ function getClientKey(req) {
 }
 
 function isRateLimited(clientKey, now) {
+  if (attemptsByClient.size > 1000) {
+    for (const [key, record] of attemptsByClient) {
+      if (now - record.startedAt >= RATE_LIMIT_WINDOW_MS) attemptsByClient.delete(key);
+    }
+  }
   const record = attemptsByClient.get(clientKey);
   if (!record || now - record.startedAt >= RATE_LIMIT_WINDOW_MS) {
     attemptsByClient.set(clientKey, { startedAt: now, count: 0 });
@@ -70,11 +75,12 @@ function setSecurityHeaders(res) {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Frame-Options', 'DENY');
 }
 
 function sameOrigin(req) {
   const origin = req.headers.origin;
-  if (!origin) return true;
+  if (!origin) return false;
   try {
     return new URL(origin).host === req.headers.host;
   } catch {
@@ -112,6 +118,9 @@ export default function handler(req, res) {
   }
 
   const supplied = typeof req.body?.password === 'string' ? req.body.password : '';
+  if (supplied.length > 1024) {
+    return res.status(400).json({ message: 'Password tidak valid.' });
+  }
   const matches = timingSafeEqual(digest(supplied), digest(password));
   if (!matches) {
     recordFailedAttempt(clientKey, now);
