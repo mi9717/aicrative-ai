@@ -8,13 +8,32 @@ export default function SharedAccessGate({ children }: { children: ReactNode }) 
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/access', { credentials: 'same-origin' })
-      .then(response => setAuthorized(response.ok))
-      .catch(() => setAuthorized(false));
+    let active = true;
+    fetch('/api/access', { credentials: 'same-origin', cache: 'no-store' })
+      .then(async response => {
+        if (!active) return;
+        if (response.status === 401) {
+          setAuthorized(false);
+          return;
+        }
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message || 'Tidak dapat memeriksa akses AICRATIVE.');
+        }
+        setAuthorized(true);
+        setError('');
+      })
+      .catch(err => {
+        if (!active) return;
+        setAuthorized(false);
+        setError(err instanceof Error ? err.message : 'Tidak dapat memeriksa akses AICRATIVE.');
+      });
+    return () => { active = false; };
   }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (busy || !password) return;
     setBusy(true);
     setError('');
     try {
@@ -22,10 +41,11 @@ export default function SharedAccessGate({ children }: { children: ReactNode }) 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
+        cache: 'no-store',
         body: JSON.stringify({ password }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || 'Password akses salah.');
+      if (!response.ok) throw new Error(data.message || 'Tidak dapat memverifikasi password.');
       setAuthorized(true);
       setPassword('');
     } catch (err) {
@@ -36,7 +56,7 @@ export default function SharedAccessGate({ children }: { children: ReactNode }) 
   };
 
   if (authorized === null) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#f7f6f2] text-sm text-[#73767c]">Memeriksa akses AICRATIVE...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[#f7f6f2] text-sm text-[#73767c]" role="status">Memeriksa akses AICRATIVE...</div>;
   }
   if (authorized) return <>{children}</>;
 
@@ -56,11 +76,11 @@ export default function SharedAccessGate({ children }: { children: ReactNode }) 
             <h1 className="text-xl font-semibold tracking-tight">AICRATIVE Studio</h1>
             <p className="text-xs text-[#73767c] leading-relaxed">Masukkan password akses untuk membuka Creative Studio.</p>
           </div>
-          {error && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2"><AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{error}</span></div>}
+          {error && <div role="alert" className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2"><AlertCircle className="w-4 h-4 shrink-0 mt-0.5" /><span>{error}</span></div>}
           <form onSubmit={submit} className="space-y-3.5">
             <div>
-              <label className="text-xs font-medium block mb-1.5">Password Akses</label>
-              <input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Masukkan password AICRATIVE" autoComplete="current-password" required className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" />
+              <label htmlFor="aicrative-access-password" className="text-xs font-medium block mb-1.5">Password Akses</label>
+              <input id="aicrative-access-password" type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Masukkan password AICRATIVE" autoComplete="current-password" required disabled={busy} className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f] disabled:opacity-60" />
             </div>
             <button type="submit" disabled={busy || !password} className="w-full py-2.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e64a12] text-white text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50">
               {busy ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Memverifikasi...</span></> : <><span>Buka Studio</span><ArrowRight className="w-4 h-4" /></>}
