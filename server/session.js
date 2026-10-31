@@ -1,10 +1,10 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 
-const COOKIE_NAME = 'aicrative_session';
+const COOKIE_NAME = '__Host-aicrative_session';
 const COOKIE_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 function getConfig() {
-  const url = (process.env.SUPABASE_URL || '').replace(/\\/$/, '');
+  const url = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
   const key = process.env.SUPABASE_ANON_KEY || '';
   const secret = process.env.AICRATIVE_SESSION_SECRET || '';
   if (!url || !key || secret.length < 32) {
@@ -165,8 +165,4 @@ export async function supabaseRest(path, { method = 'GET', body, token, prefer }
     throw error;
   }
   return data;
-}
-
-export function getSessionCookieName() {
-  return COOKIE_NAME;
 }
