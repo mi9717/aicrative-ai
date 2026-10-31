@@ -106,7 +106,7 @@ export default function App() {
       setCurrentUserId(user?.id || null);
       if (user) {
         handlePingEngine();
-        await refreshCloudProjects(user.id);
+        await refreshCloudProjects();
         initSampleProject();
       }
     } catch (error) {
@@ -115,7 +115,7 @@ export default function App() {
     }
   };
 
-  const refreshCloudProjects = async (userId: string) => {
+  const refreshCloudProjects = async () => {
     try {
       let projects = await listCloudProjects();
       if (projects.length === 0) {
@@ -190,7 +190,7 @@ export default function App() {
         } else {
           setIsAuthenticated(true);
           setCurrentUserId(result.session.user.id);
-          await refreshCloudProjects(result.session.user.id);
+          await refreshCloudProjects();
           initSampleProject();
           showToast('Akun AICRATIVE berhasil dibuat.');
         }
@@ -198,7 +198,7 @@ export default function App() {
         const session = await signIn(emailInput.trim(), passwordInput);
         setIsAuthenticated(true);
         setCurrentUserId(session.user.id);
-        await refreshCloudProjects(session.user.id);
+        await refreshCloudProjects();
         initSampleProject();
         handlePingEngine();
         showToast('Berhasil masuk ke AICRATIVE.');
@@ -282,7 +282,7 @@ export default function App() {
       };
       if (currentUserId) {
         await saveCloudProject(newProj);
-        await refreshCloudProjects(currentUserId);
+        await refreshCloudProjects();
       }
       showToast('Character, Story, Scene, Image Prompt, dan Video Prompt berhasil dibuat secara lokal.');
       setTimeout(() => {
@@ -336,7 +336,7 @@ export default function App() {
     };
     try {
       await saveCloudProject(proj);
-      await refreshCloudProjects(currentUserId);
+      await refreshCloudProjects();
       showToast(`Proyek "${proj.title}" berhasil disimpan ke cloud.`);
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Gagal menyimpan proyek.');
@@ -364,7 +364,7 @@ export default function App() {
     if (!window.confirm('Hapus proyek ini secara permanen dari koleksi cloud?')) return;
     try {
       await deleteCloudProject(id);
-      if (currentUserId) await refreshCloudProjects(currentUserId);
+      if (currentUserId) await refreshCloudProjects();
       showToast('Proyek berhasil dihapus dari koleksi cloud.');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Gagal menghapus proyek.');
