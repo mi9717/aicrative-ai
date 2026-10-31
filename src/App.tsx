@@ -241,17 +241,31 @@ export default function App() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      if (currentUserId) {
-        await saveCloudProject(newProj);
-        await refreshCloudProjects();
-      }
-      showToast('Character, Story, Scene, Image Prompt, dan Video Prompt berhasil dibuat secara lokal.');
+
+      // Generation and cloud persistence are separate operations. A cloud
+      // outage must not be reported as a local engine failure or hide results.
+      showToast('Paket produksi berhasil dibuat. Menyimpan ke workspace cloud...');
       setTimeout(() => {
         document.getElementById('productionResults')?.scrollIntoView({ behavior: 'smooth' });
       }, 250);
+
+      if (currentUserId) {
+        try {
+          await saveCloudProject(newProj);
+          await refreshCloudProjects();
+          showToast('Paket produksi berhasil dibuat dan disimpan ke cloud.');
+        } catch (saveError) {
+          console.error('Generated project cloud save failed:', saveError);
+          const reason = saveError instanceof Error ? saveError.message : 'Penyimpanan cloud tidak tersedia.';
+          showToast('Paket produksi berhasil dibuat, tetapi belum tersimpan ke cloud: ' + reason);
+        }
+      } else {
+        showToast('Paket produksi berhasil dibuat, tetapi sesi cloud belum siap. Hasil tetap tersedia di Studio.');
+      }
     } catch (error) {
-      console.error('Local Creative Engine error:', error);
-      showToast('Generator lokal mengalami kendala. Periksa kembali input proyek.');
+      console.error('Local Creative Engine generation failed:', error);
+      const reason = error instanceof Error ? error.message : 'Kesalahan tidak diketahui.';
+      showToast('Gagal membuat paket produksi: ' + reason);
     } finally {
       setIsGenerating(false);
       setGenerationStep('');
