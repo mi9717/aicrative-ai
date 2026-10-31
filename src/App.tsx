@@ -120,7 +120,7 @@ export default function App() {
       let projects = await listCloudProjects();
       if (projects.length === 0) {
         const legacy = readLegacyLocalProjects();
-        for (const project of legacy) await saveCloudProject(project, userId);
+        for (const project of legacy) await saveCloudProject(project);
         if (legacy.length) {
           clearLegacyLocalProjects();
           projects = await listCloudProjects();
@@ -281,7 +281,7 @@ export default function App() {
         updatedAt: new Date().toISOString(),
       };
       if (currentUserId) {
-        await saveCloudProject(newProj, currentUserId);
+        await saveCloudProject(newProj);
         await refreshCloudProjects(currentUserId);
       }
       showToast('Character, Story, Scene, Image Prompt, dan Video Prompt berhasil dibuat secara lokal.');
@@ -335,7 +335,7 @@ export default function App() {
       updatedAt: new Date().toISOString(),
     };
     try {
-      await saveCloudProject(proj, currentUserId);
+      await saveCloudProject(proj);
       await refreshCloudProjects(currentUserId);
       showToast(`Proyek "${proj.title}" berhasil disimpan ke cloud.`);
     } catch (error) {
