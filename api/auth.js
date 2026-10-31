@@ -22,6 +22,8 @@ export default async function handler(req, res) {
   setNoStoreHeaders(res);
 
   if (req.method === 'GET') {
+    // Retire the encrypted per-user Supabase session cookie from the previous auth flow.
+    res.setHeader('Set-Cookie', '__Host-aicrative_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0');
     if (!isSharedAccessAuthorized(req)) {
       return res.status(200).json({ user: null });
     }
