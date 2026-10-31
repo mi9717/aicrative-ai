@@ -279,10 +279,26 @@ export default function App() {
   };
 
   const handleSaveCurrentProject = async () => {
-    if (!storyBible || !currentUserId) return;
+    if (!currentUserId) {
+      showToast('Sesi workspace belum siap. Muat ulang halaman dan masuk kembali.');
+      return;
+    }
+
+    // Draft projects must also be saveable before the user runs production.
+    // ProjectData requires a StoryBible, so provide a safe editable draft
+    // placeholder instead of silently aborting when storyBible is still null.
+    const draftBible: StoryBible = storyBible || {
+      title: projectTitle.trim() || 'Proyek Cerita Baru',
+      world: '',
+      character: '',
+      characterLock: '',
+      visual: effectiveStyle,
+      rules: additionalRules,
+    };
+
     const proj: ProjectData = {
       id: projectId,
-      title: projectTitle || storyBible.title,
+      title: projectTitle.trim() || draftBible.title || 'Proyek Cerita Baru',
       idea: storyIdea,
       sceneCount,
       visualStyle,
@@ -290,7 +306,7 @@ export default function App() {
       aspectRatio,
       additionalRules,
       dialogueLanguage,
-      bible: storyBible,
+      bible: draftBible,
       scenes,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -300,6 +316,7 @@ export default function App() {
       await refreshCloudProjects();
       showToast(`Proyek "${proj.title}" berhasil disimpan ke cloud.`);
     } catch (error) {
+      console.error('Cloud project save failed:', error);
       showToast(error instanceof Error ? error.message : 'Gagal menyimpan proyek.');
     }
   };
