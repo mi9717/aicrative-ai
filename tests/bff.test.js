@@ -152,7 +152,7 @@ test('BFF projects requires an authenticated encrypted session', async () => {
   assert.equal(res.statusCode, 401);
 });
 
-test('BFF auth returns unauthenticated for an absent session', async () => {
+test('BFF auth returns unauthenticated when no session cookie exists', async () => {
   configure();
   const res = response();
   await authHandler(req(), res);
