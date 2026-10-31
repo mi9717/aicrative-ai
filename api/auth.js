@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const session = await getValidSession(req, res, { verifyUser: true });
-      if (!session) return res.status(200).json({ user: null });
+      if (!session) { clearSessionCookie(res); return res.status(200).json({ user: null }); }
       return res.status(200).json({
         user: {
           id: session.user.id,
