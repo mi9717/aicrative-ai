@@ -99,6 +99,17 @@ export default function App() {
     checkInitialAuth();
   }, []);
 
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setIsAuthenticated(false);
+      setCurrentUserId(null);
+      setSavedProjects([]);
+      setAuthError('Sesi berakhir. Silakan masuk kembali ke AICRATIVE.');
+    };
+    window.addEventListener('aicrative-session-expired', handleSessionExpired);
+    return () => window.removeEventListener('aicrative-session-expired', handleSessionExpired);
+  }, []);
+
   const checkInitialAuth = async () => {
     try {
       const user = await getCurrentUser();
