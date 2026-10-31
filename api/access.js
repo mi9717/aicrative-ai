@@ -10,9 +10,9 @@ function digest(value) {
   return createHash('sha256').update(value).digest();
 }
 
-function signature(password, issuedAt) {
-  return createHmac('sha256', password)
-    .update('aicrative-shared-access-v2:' + issuedAt)
+function signature(signingSecret, issuedAt) {
+  return createHmac('sha256', signingSecret)
+    .update('aicrative-shared-access-v3:' + issuedAt)
     .digest('hex');
 }
 
@@ -51,7 +51,7 @@ function clearAttempts(clientKey) {
   attemptsByClient.delete(clientKey);
 }
 
-function validCookie(req, password, nowSeconds = Math.floor(Date.now() / 1000)) {
+function validCookie(req, signingSecret, nowSeconds = Math.floor(Date.now() / 1000)) {
   const cookies = (req.headers.cookie || '').split(';').map(value => value.trim());
   const item = cookies.find(value => value.startsWith(COOKIE_NAME + '='));
   if (!item) return false;
@@ -64,7 +64,7 @@ function validCookie(req, password, nowSeconds = Math.floor(Date.now() / 1000)) 
     return false;
   }
 
-  const expected = signature(password, issuedAt);
+  const expected = signature(signingSecret, issuedAt);
   const actualDigest = digest(supplied[1]);
   const expectedDigest = digest(expected);
   return timingSafeEqual(actualDigest, expectedDigest);
@@ -82,21 +82,34 @@ function sameOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return false;
   try {
-    return new URL(origin).host === req.headers.host;
+    const parsed = new URL(origin);
+    return parsed.host === req.headers.host && (parsed.protocol === 'https:' || parsed.hostname === 'localhost');
   } catch {
     return false;
   }
 }
 
+export function isSharedAccessAuthorized(req, nowSeconds = Math.floor(Date.now() / 1000)) {
+  const password = process.env.AICRATIVE_ACCESS_PASSWORD || '';
+  const signingSecret = process.env.AICRATIVE_SESSION_SECRET || '';
+  if (!password || signingSecret.length < 32) return false;
+  return validCookie(req, signingSecret, nowSeconds);
+}
+
+export function clearSharedAccessCookie(res) {
+  res.setHeader('Set-Cookie', COOKIE_NAME + '=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0');
+}
+
 export default function handler(req, res) {
   setSecurityHeaders(res);
-  const password = process.env.AICRATIVE_ACCESS_PASSWORD;
-  if (!password) {
-    return res.status(503).json({ message: 'Password akses belum dikonfigurasi di Vercel.' });
+  const password = process.env.AICRATIVE_ACCESS_PASSWORD || '';
+  const signingSecret = process.env.AICRATIVE_SESSION_SECRET || '';
+  if (!password || signingSecret.length < 32) {
+    return res.status(503).json({ message: 'Password akses atau session secret belum dikonfigurasi di Vercel.' });
   }
 
   if (req.method === 'GET') {
-    return validCookie(req, password)
+    return isSharedAccessAuthorized(req)
       ? res.status(200).json({ authorized: true })
       : res.status(401).json({ authorized: false });
   }
@@ -129,7 +142,7 @@ export default function handler(req, res) {
 
   clearAttempts(clientKey);
   const issuedAt = Math.floor(now / 1000);
-  const cookieValue = issuedAt + '.' + signature(password, issuedAt);
+  const cookieValue = issuedAt + '.' + signature(signingSecret, issuedAt);
   res.setHeader(
     'Set-Cookie',
     COOKIE_NAME + '=' + cookieValue + '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=' + COOKIE_TTL_SECONDS
