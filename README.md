@@ -14,9 +14,17 @@ AICRATIVE is a browser-based creative prompt studio. Character, Story, Scene, Im
 6. In Supabase → Authentication → URL Configuration, set the Site URL to the deployed AICRATIVE domain and add the Vercel preview/deployed URLs to Redirect URLs if needed.
 7. For public self-registration, configure email delivery and decide whether email confirmation is required. If confirmation is enabled, new users must verify their email before signing in.
 
+## Shared access gate
+
+- Configure `AICRATIVE_ACCESS_PASSWORD` as a server-only environment variable in Vercel. Never prefix it with `VITE_` and never place its value in client code.
+- The access endpoint issues a signed, time-limited, HttpOnly cookie and applies per-instance in-memory throttling. The throttling is best-effort and is not a distributed rate limiter; use an edge/WAF or shared rate-limit store for stronger production abuse protection.
+- The shared password gate controls access to the studio interface. It is not a substitute for Supabase authentication or database Row Level Security; project data must remain protected by the user's Supabase session and RLS policies.
+- Existing browsers with an older access cookie will need to enter the shared password once after this update.
+
 ## Data and security
 
-- Each account can only access its own project rows. PostgreSQL Row Level Security (RLS) enforces this using `auth.uid() = user_id`.
+- Each signed-in account can only access its own project rows. PostgreSQL Row Level Security (RLS) enforces this using `auth.uid() = user_id`.
+- A fresh browser session now opens the email sign-in/registration screen instead of silently creating an anonymous Supabase account.
 - The browser uses only the Supabase Publishable/anon key and the signed-in user's access token. Never put a service-role key in Vercel variables prefixed with `VITE_`.
 - Existing projects saved in the old browser `localStorage` are imported to the first signed-in account when that account has no cloud projects. Keep a backup of browser data until migration is confirmed.
 - Local Creative Engine processing happens in the browser. Supabase is used for authentication and cloud project storage only; it is not an AI provider.
