@@ -361,6 +361,7 @@ export default function App() {
 
   const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!window.confirm('Hapus proyek ini secara permanen dari koleksi cloud?')) return;
     try {
       await deleteCloudProject(id);
       if (currentUserId) await refreshCloudProjects(currentUserId);

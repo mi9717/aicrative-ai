@@ -1,36 +1,29 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script>
-      // Browser extension compatibility shim for window.fetch
-      (function() {
+      // Keep the compatibility shim isolated to browser-extension errors.
+      (function () {
         try {
           var originalFetch = window.fetch;
           Object.defineProperty(window, 'fetch', {
             configurable: true,
             enumerable: true,
-            get: function() {
-              return originalFetch;
-            },
-            set: function(fn) {
-              originalFetch = fn;
-            }
+            get: function () { return originalFetch; },
+            set: function (fn) { originalFetch = fn; }
           });
-        } catch (e) {
-          // Ignore
+        } catch (error) {
+          // Ignore browsers that do not allow redefining fetch.
         }
-
-        // Suppress unhandled errors originating from browser extensions
-        window.addEventListener('error', function(event) {
+        window.addEventListener('error', function (event) {
           if (event && event.filename && (
-            event.filename.indexOf('chrome-extension://') !== -1 || 
+            event.filename.indexOf('chrome-extension://') !== -1 ||
             event.filename.indexOf('moz-extension://') !== -1
           )) {
             event.stopImmediatePropagation();
             event.preventDefault();
-            return true;
           }
         }, true);
       })();
@@ -38,18 +31,17 @@
     <title>AICRATIVE — AI Creative Studio</title>
     <link rel="icon" type="image/svg+xml" href="/aicrative-mark.svg" />
     <meta name="theme-color" content="#F8F6F3" />
-    <meta name="description" content="AI Creative Studio untuk menyusun karakter, cerita, adegan, serta prompt gambar dan video yang konsisten." />
+    <meta name="description" content="AICRATIVE Creative Studio untuk menyusun karakter, cerita, adegan, serta prompt gambar dan video yang konsisten." />
     <meta property="og:title" content="AICRATIVE — AI Creative Production Studio" />
-    <meta property="og:description" content="Studio produksi kreatif AI terhubung Supabase dan xKiro untuk menyusun cerita, adegan, Story Bible, serta prompt gambar dan video yang konsisten." />
+    <meta property="og:description" content="Studio produksi kreatif untuk menyusun karakter, cerita, adegan, Story Bible, serta prompt gambar dan video yang konsisten." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
