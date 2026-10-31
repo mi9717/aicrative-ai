@@ -7,7 +7,7 @@ function getConfig() {
   const url = (process.env.SUPABASE_URL || '').replace(/\\/$/, '');
   const key = process.env.SUPABASE_ANON_KEY || '';
   const secret = process.env.AICRATIVE_SESSION_SECRET || '';
-  if (!url || !key || !secret) {
+  if (!url || !key || secret.length < 32) {
     throw new Error('Server auth belum dikonfigurasi. Periksa SUPABASE_URL, SUPABASE_ANON_KEY, dan AICRATIVE_SESSION_SECRET.');
   }
   return { url, key, encryptionKey: createHash('sha256').update(secret).digest() };
