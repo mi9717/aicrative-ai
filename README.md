@@ -5,48 +5,48 @@ AICRATIVE is a browser-based creative prompt studio. Character, Story, Scene, Im
 ## Supabase setup
 
 1. Open the Supabase project used by AICRATIVE.
-2. Open **SQL Editor** and run the complete migration in `supabase/migrations/202610300001_aicrative_accounts_projects.sql`.
-3. In **Project Settings → API**, copy the Project URL and the Publishable key (or legacy anon key). Do not use the service-role/secret key in the frontend.
-4. In Vercel → Project → Settings → Environment Variables, add:
-   - `VITE_SUPABASE_URL` = the Project URL, for example `https://YOUR_PROJECT.supabase.co`
-   - `VITE_SUPABASE_ANON_KEY` = the Publishable key (`sb_publishable_...`) or anon key
-5. Redeploy the Vercel project so Vite can embed the public configuration at build time.
-6. In Supabase → Authentication → URL Configuration, set the Site URL to the deployed AICRATIVE domain and add the Vercel preview/deployed URLs to Redirect URLs if needed.
-7. For public self-registration, configure email delivery and decide whether email confirmation is required. If confirmation is enabled, new users must verify their email before signing in.
+2. Run the schema migration `supabase/migrations/202610300001_aicrative_accounts_projects.sql` in the Supabase SQL Editor.
+3. Run `supabase/migrations/202610310001_security_hardening.sql` in the same SQL Editor.
+4. In **Project Settings → API**, copy the Project URL and the Publishable key (or legacy anon key). Never use the service-role/secret key.
+5. In Vercel → Project → Settings → Environment Variables, add these server-only variables (do not prefix them with `VITE_`):
+   - `SUPABASE_URL` = Project URL, e.g. `https://YOUR_PROJECT.supabase.co`
+   - `SUPABASE_ANON_KEY` = Publishable key (`sb_publishable_...`) or legacy anon key
+   - `AICRATIVE_SESSION_SECRET` = a unique random secret of at least 32 characters
+   - `AICRATIVE_ACCESS_PASSWORD` = shared studio gate password
+6. Generate a strong session secret, for example with `openssl rand -base64 48`. Do not reuse the shared access password as the session secret.
+7. In Supabase → Authentication → URL Configuration, set the Site URL to the deployed AICRATIVE domain. Add only the required app URLs to Redirect URLs if needed.
+8. Configure email delivery and decide whether email confirmation is required for public registration.
 
 ## Shared access gate
 
-- Configure `AICRATIVE_ACCESS_PASSWORD` as a server-only environment variable in Vercel. Never prefix it with `VITE_` and never place its value in client code.
+- Configure `AICRATIVE_ACCESS_PASSWORD` as a server-only environment variable in Vercel.
 - The access endpoint issues a signed, time-limited, HttpOnly cookie and applies per-instance in-memory throttling. The throttling is best-effort and is not a distributed rate limiter; use an edge/WAF or shared rate-limit store for stronger production abuse protection.
-- The shared password gate controls access to the studio interface. It is not a substitute for Supabase authentication or database Row Level Security; project data must remain protected by the user's Supabase session and RLS policies.
-- Existing browsers with an older access cookie will need to enter the shared password once after this update.
+- The shared password gate controls access to the studio interface. It is not a substitute for Supabase authentication or database Row Level Security.
+- Existing browsers with an older access cookie will need to enter the shared password once after the update.
 
 ## Data and security
 
-- Each signed-in account can only access its own project rows. PostgreSQL Row Level Security (RLS) enforces this using `auth.uid() = user_id`.
-- A fresh browser session opens the email sign-in/registration screen instead of silently creating an anonymous Supabase account.
-- The browser uses only the Supabase Publishable/anon key and the signed-in user's access token. Never put a service-role key in Vercel variables prefixed with `VITE_`.
-- Existing projects saved in the old browser `localStorage` are imported to the first signed-in account when that account has no cloud projects. Keep a backup of browser data until migration is confirmed.
-- Local Creative Engine processing happens in the browser. Supabase is used for authentication and cloud project storage only; it is not an AI provider.
-- After the initial schema migration, also run `supabase/migrations/202610310001_security_hardening.sql` in the Supabase SQL Editor. It revokes anonymous table access and restricts execution of the profile bootstrap trigger function.
+- Supabase authentication and project storage run through same-origin Vercel API routes. The browser no longer receives Supabase access or refresh tokens.
+- The server encrypts Supabase session tokens into a Secure, HttpOnly, SameSite cookie using AES-256-GCM. Keep `AICRATIVE_SESSION_SECRET` private and stable; rotating it invalidates all active sessions.
+- Session refresh and logout are handled server-side. The API never returns access or refresh tokens to the browser.
+- Project ownership is derived from the authenticated server session, not accepted from a client-supplied `user_id`. PostgreSQL RLS remains the final data boundary.
+- Existing cloud projects are not deleted. The old browser-stored Supabase session is cleared, so users must sign in again after this change.
+- Legacy project data in `aicrative_projects_v2` remains in browser storage and is imported for the first signed-in account if no cloud projects exist. Keep a backup until migration is confirmed.
 - Vercel applies baseline security headers for content sniffing, framing, referrer leakage, browser permissions, and HTTPS transport.
+- Never configure a service-role or secret key. The backend only needs the Publishable/anon key.
 
-## Known security boundary
+## Local development
 
-Supabase access and refresh tokens are currently stored in browser `localStorage`. This is still exposed to JavaScript executing on the same origin, so an XSS vulnerability could steal a session. The current frontend-only architecture cannot make those tokens HttpOnly. A proper fix requires a server-side authentication/BFF layer that owns the session and issues Secure, HttpOnly, SameSite cookies. Do not treat the shared studio password as a replacement for that work.
-
-## Run locally
-
-Copy `.env.example` to `.env.local`, fill in the two public Supabase values, then run:
+Copy `.env.example` to `.env.local`, fill in the server-only values, then run:
 
 ```bash
 npm install
-npm run dev
+npx vercel dev
 ```
 
-The Vite development server serves the frontend only. To test the Vercel `/api/access` serverless function locally, use `npx vercel dev` after configuring the server-only environment variables.
+Use `npx vercel dev` rather than plain Vite because the application depends on the `/api/auth` and `/api/projects` serverless routes.
 
-Build check:
+Build and test:
 
 ```bash
 npm run build
