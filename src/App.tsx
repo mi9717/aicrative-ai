@@ -86,6 +86,7 @@ export default function App() {
   const [videoPromptMode, setVideoPromptMode] = useState<'standard' | 'cinematic'>('standard');
   const [isOptimizingVideoPrompts, setIsOptimizingVideoPrompts] = useState<boolean>(false);
   const [videoPromptError, setVideoPromptError] = useState<string | null>(null);
+  const [videoPromptsNeedRefresh, setVideoPromptsNeedRefresh] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [activeBibleTab, setActiveBibleTab] = useState<'char' | 'world' | 'visual' | 'rules'>('char');
@@ -283,6 +284,7 @@ export default function App() {
         await refreshCloudProjects();
       }
       setVideoPromptError(null);
+      setVideoPromptsNeedRefresh(false);
       showToast('Semua scene dan Video Prompt Flow berhasil dibuat.');
       setTimeout(() => {
         document.getElementById('productionResults')?.scrollIntoView({ behavior: 'smooth' });
@@ -309,6 +311,7 @@ export default function App() {
       );
       setScenes(current => current.map((scene, index) => ({ ...scene, video: prompts[index] })));
       setVideoPromptMode(mode);
+      setVideoPromptsNeedRefresh(false);
       showToast(mode === 'standard' ? 'Standard Mode diterapkan ke seluruh scene.' : 'Cinematic Mode diterapkan ke seluruh scene.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Gagal memperbarui seluruh Video Prompt.';
@@ -334,6 +337,7 @@ export default function App() {
         image: buildImagePrompt(storyBible, scene, index, effectiveStyle, aspectRatio),
         video: prompts[index],
       })));
+      setVideoPromptsNeedRefresh(false);
       showToast('Story Bible dan seluruh Video Prompt berhasil diperbarui.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Gagal memperbarui Video Prompt.';
@@ -350,6 +354,7 @@ export default function App() {
     updated[index] = { ...updated[index], [field]: value };
     updated[index].image = buildImagePrompt(storyBible, updated[index], index, effectiveStyle, aspectRatio);
     setScenes(updated);
+    setVideoPromptsNeedRefresh(true);
   };
 
   const handleSaveCurrentProject = async () => {
@@ -1284,6 +1289,7 @@ export default function App() {
                       Cinematic — Multi-Shot
                     </button>
                     <span className="text-[11px] text-[#73767c]">{isOptimizingVideoPrompts ? 'Menerjemahkan semua scene...' : 'Default: Standard'}</span>
+                    <button type="button" disabled={isOptimizingVideoPrompts} onClick={() => handleChangeVideoPromptMode(videoPromptMode)} className="px-3 py-1.5 rounded-lg border border-[#e6e4dc] bg-white text-xs font-medium text-[#555] disabled:opacity-50">{videoPromptsNeedRefresh ? 'Perbarui Semua Prompt' : 'Generate Ulang Semua'}</button>
                   </div>
 
                   {/* Format Filter & Export Buttons */}
@@ -1358,6 +1364,11 @@ export default function App() {
                   </div>
                 </div>
 
+                {videoPromptsNeedRefresh && !videoPromptError && (
+                  <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    Ada scene yang diedit. Klik <strong>Perbarui Semua Prompt</strong> agar Video Prompt mengikuti perubahan terbaru.
+                  </div>
+                )}
                 {videoPromptError && (
                   <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
                     <strong>Video Prompt belum siap:</strong> {videoPromptError}
