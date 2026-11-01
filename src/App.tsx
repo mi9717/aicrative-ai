@@ -164,11 +164,10 @@ export default function App() {
 
   const effectiveStyle = visualStyle === 'Other' && customStyle.trim() ? customStyle.trim() : visualStyle;
 
-  // Supabase email/password authentication
+  // Shared password-only access gate
   const handleLoginSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setAuthError(null);
-    setAuthNotice(null);
     if (!passwordInput) {
       setAuthError('Masukkan password akses AICRATIVE.');
       return;
@@ -479,7 +478,7 @@ export default function App() {
   });
 
   // =========================================================================
-  // RENDER: SUPABASE AUTHENTICATION
+  // RENDER: SHARED PASSWORD ACCESS
   // =========================================================================
   if (isAuthenticated === false || isAuthenticated === null) {
     return (
