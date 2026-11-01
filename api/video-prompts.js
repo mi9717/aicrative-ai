@@ -22,7 +22,7 @@ function authorized(req) {
 function send(res, status, data) { return res.status(status).json(data); }
 function str(value, max = 4000) { return typeof value === 'string' ? value.slice(0, max) : ''; }
 function likelyIndonesian(value) {
-  return /\b(yang|dengan|untuk|pada|dari|seorang|tokoh|lokasi|tempat|adegan|menjadi|tersebut|adalah|dan|atau|tidak|harus|melihat|berjalan|berdiri|duduk|kamar|sekolah|perundungan)\b/i.test(value);
+  return /\b(yang|dengan|untuk|pada|dari|seorang|tokoh|lokasi|tempat|adegan|menjadi|tersebut|adalah|tidak|harus|melihat|berjalan|berdiri|duduk|kamar|sekolah|perundungan)\b/i.test(value);
 }
 
 function composePrompt(project, scene, translated, index, mode) {
