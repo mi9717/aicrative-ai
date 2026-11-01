@@ -279,6 +279,16 @@ export default function App() {
     }
   };
 
+  const handleChangeVideoPromptMode = (mode: 'standard' | 'cinematic') => {
+    setVideoPromptMode(mode);
+    if (!storyBible || scenes.length === 0) return;
+    setScenes((current) => current.map((scene, index) => ({
+      ...scene,
+      video: buildVideoPrompt(storyBible, scene, index, effectiveStyle, aspectRatio, dialogueLanguage, mode),
+    })));
+    showToast(mode === 'standard' ? 'Standard Mode diterapkan ke semua scene.' : 'Cinematic Mode diterapkan ke semua scene.');
+  };
+
   const handleReapplyBible = () => {
     if (!storyBible || scenes.length === 0) return;
     const updated = scenes.map((s, idx) => ({
@@ -1224,10 +1234,10 @@ export default function App() {
 
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-semibold text-[#555]">Mode Video:</span>
-                    <button type="button" onClick={() => setVideoPromptMode('standard')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${videoPromptMode === 'standard' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
+                    <button type="button" onClick={() => handleChangeVideoPromptMode('standard')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${videoPromptMode === 'standard' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
                       Standard — 1 Scene / 1 Prompt
                     </button>
-                    <button type="button" onClick={() => setVideoPromptMode('cinematic')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${videoPromptMode === 'cinematic' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
+                    <button type="button" onClick={() => handleChangeVideoPromptMode('cinematic')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${videoPromptMode === 'cinematic' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
                       Cinematic — Multi-Shot
                     </button>
                     <span className="text-[11px] text-[#73767c]">Default: Standard</span>
