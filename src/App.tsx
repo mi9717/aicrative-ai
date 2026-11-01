@@ -1277,13 +1277,13 @@ export default function App() {
 
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-semibold text-[#555]">Mode Video:</span>
-                    <button type="button" onClick={() => handleChangeVideoPromptMode('standard')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${videoPromptMode === 'standard' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
+                    <button type="button" disabled={isOptimizingVideoPrompts} onClick={() => handleChangeVideoPromptMode('standard')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50 ${videoPromptMode === 'standard' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
                       Standard — 1 Scene / 1 Prompt
                     </button>
-                    <button type="button" onClick={() => handleChangeVideoPromptMode('cinematic')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${videoPromptMode === 'cinematic' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
+                    <button type="button" disabled={isOptimizingVideoPrompts} onClick={() => handleChangeVideoPromptMode('cinematic')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-50 ${videoPromptMode === 'cinematic' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
                       Cinematic — Multi-Shot
                     </button>
-                    <span className="text-[11px] text-[#73767c]">Default: Standard</span>
+                    <span className="text-[11px] text-[#73767c]">{isOptimizingVideoPrompts ? 'Menerjemahkan semua scene...' : 'Default: Standard'}</span>
                   </div>
 
                   {/* Format Filter & Export Buttons */}
@@ -1357,6 +1357,12 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+
+                {videoPromptError && (
+                  <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                    <strong>Video Prompt belum siap:</strong> {videoPromptError}
+                  </div>
+                )}
 
                 {/* Scene Cards Stack */}
                 <div className="space-y-5">
