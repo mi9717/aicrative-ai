@@ -1,6 +1,6 @@
 # AICRATIVE
 
-AICRATIVE is a browser-based creative prompt studio. It uses **one generation engine only: the deterministic Local Creative Engine** in `src/engines/`. Character, Story, Scene, Image Prompt, and Video Prompt are generated in the browser. No external AI provider or xKiro/Qwen generation endpoint is used by the application.
+AICRATIVE is a browser-based creative prompt studio. It uses **one generation engine only: the deterministic Local Creative Engine** in `src/engines/`. Character, Story, Scene, and Image Prompt are generated in the browser. Video Prompt visual fields are translated and optimized per scene through a server-side Gemini API route; dialogue is preserved verbatim. No xKiro/Qwen generation endpoint is used.
 
 ## Canonical domain
 
@@ -16,10 +16,10 @@ The Vercel-provided `aicrative-ai.vercel.app` address is a deployment hostname, 
 - `src/engines/sceneEngine.ts`: scene breakdown.
 - `src/engines/characterEngine.ts`: character profile and reference prompt.
 - `src/engines/imagePromptEngine.ts`: image still-frame prompts.
-- `src/engines/videoPromptEngine.ts`: video generation prompts.
+- `src/engines/videoPromptEngine.ts`: local video prompt composition helpers.\n- `api/video-prompts.js`: authenticated server-side Gemini translation and Google Flow prompt composition for every scene. The browser never receives the Gemini API key.
 - `src/engines/index.ts`: single orchestration entry point.
 
-The Local Creative Engine builds structured prompts and does not create actual image or video files. Supabase is used only as cloud storage for the shared project workspace. There is no external AI generation provider.
+The Local Creative Engine builds story and scene structures and does not create actual image or video files. Gemini is used only to translate and optimize video-prompt text, not to generate media. Supabase is used only as cloud storage for the shared project workspace. Standard mode creates one prompt per scene; Cinematic mode creates a shot-by-shot prompt sequence.
 
 ## Access model: one shared password
 
@@ -37,11 +37,11 @@ The Local Creative Engine builds structured prompts and does not create actual i
 3. In Vercel → Project → Settings → Environment Variables, add these server-side variables for Production (and Preview only if needed):
    - `AICRATIVE_ACCESS_PASSWORD` = the shared password chosen by the owner
    - `SUPABASE_URL` = the Supabase Project URL
-   - `SUPABASE_SERVICE_ROLE_KEY` = the Supabase service-role/secret key
+   - `SUPABASE_SERVICE_ROLE_KEY` = the Supabase service-role/secret key\n   - `GEMINI_API_KEY` = a Google AI Studio API key used only by the server-side Flow prompt translator
 4. **Never** name the service-role variable `VITE_SUPABASE_SERVICE_ROLE_KEY`; never expose it in client-side code or commit it to Git.
 5. Redeploy the Vercel project after the environment variables and SQL migration are ready.
 
-The Vercel API verifies the HttpOnly access cookie before using the service-role key to read/write `public.shared_projects`. Row Level Security is enabled on that table and no browser roles receive access; the service-role key stays server-side.
+The Vercel APIs verify the HttpOnly access cookie before using the service-role key to read/write `public.shared_projects` or call Gemini for prompt translation. Row Level Security is enabled on that table and no browser roles receive access; the service-role key stays server-side.
 
 ## Existing Supabase Auth settings
 
