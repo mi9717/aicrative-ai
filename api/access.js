@@ -101,8 +101,19 @@ export default function handler(req, res) {
       : res.status(401).json({ authorized: false });
   }
 
+  if (req.method === 'DELETE') {
+    if (!sameOrigin(req)) {
+      return res.status(403).json({ message: 'Permintaan lintas-origin ditolak.' });
+    }
+    res.setHeader(
+      'Set-Cookie',
+      COOKIE_NAME + '=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0'
+    );
+    return res.status(200).json({ authorized: false });
+  }
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'GET, POST');
+    res.setHeader('Allow', 'GET, POST, DELETE');
     return res.status(405).json({ message: 'Method not allowed.' });
   }
 

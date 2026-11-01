@@ -105,10 +105,19 @@ test('rate-limits repeated failed password attempts per client', () => {
   assert.ok(limited.headers['Retry-After']);
 });
 
-test('rejects unsupported methods', () => {
+test('clears the shared access cookie on logout', () => {
   process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
   const res = createResponse();
   handler(request({ method: 'DELETE' }), res);
+  assert.equal(res.statusCode, 200);
+  assert.match(res.headers['Set-Cookie'], /Max-Age=0/);
+  assert.match(res.headers['Set-Cookie'], /HttpOnly/);
+});
+
+test('rejects unsupported methods', () => {
+  process.env.AICRATIVE_ACCESS_PASSWORD = 'test-password';
+  const res = createResponse();
+  handler(request({ method: 'PUT' }), res);
   assert.equal(res.statusCode, 405);
-  assert.equal(res.headers.Allow, 'GET, POST');
+  assert.equal(res.headers.Allow, 'GET, POST, DELETE');
 });
