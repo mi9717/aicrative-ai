@@ -49,31 +49,98 @@ ASPECT RATIO: ${ratio}
 QUALITY RESTRICTIONS: no typography, text, subtitles, speech balloons, watermark, duplicate faces, or anatomical distortions.`;
 }
 
-export function buildVideoPrompt(bible: StoryBible, scene: SceneData, index: number, visualStyle: string, ratio: string, language: 'id' | 'en'): string {
-  return `AICRATIVE PRODUCTION PROMPT — VIDEO GENERATION + DIALOGUE
-PROJECT: ${bible.title}
-SCENE ${String(index + 1).padStart(2, '0')}: ${scene.title}
-LOCATION: ${scene.location}
-NARRATIVE BEAT: ${scene.action}
+export type VideoPromptMode = 'standard' | 'cinematic';
 
-CAMERA DIRECTION:
-${buildCameraDirection(scene, visualStyle)}
+export function buildVideoPrompt(
+  bible: StoryBible,
+  scene: SceneData,
+  index: number,
+  visualStyle: string,
+  ratio: string,
+  language: 'id' | 'en',
+  mode: VideoPromptMode = 'standard',
+): string {
+  const dialogueLanguage = language === 'id' ? 'Indonesian' : 'English';
+  const dialogue = (scene.dialogue || '').trim();
+  const identity = [bible.characterLock, bible.character].filter(Boolean).join('\n');
+  const sharedRules = [
+    'Use the supplied character reference as the single source of truth for character appearance.',
+    'Preserve the same face, age, hairstyle, skin tone, body proportions, wardrobe, footwear, and accessories in every frame.',
+    'Do not invent additional characters, actions, props, or story events that are not specified.',
+    'Use natural human motion, coherent screen direction, stable anatomy, and physically plausible movement.',
+    'No identity drift, face morphing, costume changes, flicker, warped anatomy, extra limbs, abrupt camera movement, or unintended cuts.',
+  ].join('\n- ');
 
-${buildSoundDesign(scene, visualStyle)}
+  const dialogueBlock = dialogue
+    ? `DIALOGUE — EXACT SPOKEN WORDS\nThe character speaks this exact line in ${dialogueLanguage}:\n${dialogue}\nDo not translate, paraphrase, rewrite, or add words. Use natural delivery and accurate lip synchronization. Do not add subtitles unless requested.`
+    : 'DIALOGUE\nNo spoken dialogue. Do not invent speech, narration, or subtitles.';
 
-CHARACTER CONTINUITY LOCK:
-${bible.characterLock}
-${bible.character}
-Keep the same identity and outfit throughout every frame. No morphing, face drift, or costume changes.
+  const sound = buildSoundDesign(scene, visualStyle);
+  const base = [
+    'AICRATIVE — GOOGLE FLOW OPTIMIZED VIDEO PROMPT',
+    `PROJECT: ${bible.title}`,
+    `SCENE ${String(index + 1).padStart(2, '0')}: ${scene.title}`,
+    '',
+    'SCENE AND SETTING',
+    `Location: ${scene.location}`,
+    `Visual event: ${scene.action || scene.summary}`,
+    'Show one clear, continuous visual event. Prioritize the specified action over background details.',
+    '',
+    'CHARACTER REFERENCE AND CONTINUITY',
+    identity,
+    `- ${sharedRules}`,
+    '',
+    'PERFORMANCE AND MOTION',
+    'Show restrained, readable body language and facial expressions. Keep the action physically simple and continuous. Avoid simultaneous conflicting actions.',
+    '',
+    'CAMERA AND COMPOSITION',
+    buildCameraDirection(scene, visualStyle),
+    'Keep the main subject clearly visible. Use one continuous camera move and avoid unnecessary shot changes.',
+    '',
+    'ENVIRONMENT AND LIGHTING',
+    `Maintain the established setting: ${bible.world}`,
+    `Visual direction: ${bible.visual}`,
+    `Continuity rules: ${bible.rules}`,
+    'Use coherent lighting, natural shadows, and a clean visual hierarchy.',
+    '',
+    'AUDIO',
+    sound,
+    '',
+    dialogueBlock,
+    '',
+    'OUTPUT',
+    `Visual style: ${visualStyle}`,
+    `Aspect ratio: ${ratio}`,
+    'Cinematic 24fps motion. Keep the scene visually coherent from the first frame to the last.',
+  ];
 
-SPOKEN DIALOGUE (VERBATIM):
-${scene.dialogue}
-LANGUAGE: ${language === 'id' ? 'Bahasa Indonesia' : 'English'}
-Deliver the exact line with natural emotional timing and accurate lip synchronization. No subtitles unless requested.
+  if (mode === 'standard') return base.join('\n');
 
-VISUAL STYLE: ${visualStyle}
-ASPECT RATIO: ${ratio}
-AVOID: identity drift, facial warping, flickering garments, unnatural cuts, and jerky camera movements.`;
+  const shots = [
+    ['SHOT 01 — ESTABLISHING', 'Begin with a clear view of the setting and the character in context. Establish spatial relationships before the main action.'],
+    ['SHOT 02 — MAIN ACTION', 'Move to a medium composition and show the single central action clearly. Preserve screen direction and character identity.'],
+    ['SHOT 03 — EMOTIONAL DETAIL', 'Finish on a close or medium-close composition that captures the character reaction or the consequence of the action. Hold briefly; do not introduce a new event.'],
+  ];
+  return [
+    'AICRATIVE — GOOGLE FLOW OPTIMIZED CINEMATIC SEQUENCE',
+    ...base.slice(1, base.indexOf('CAMERA AND COMPOSITION')),
+    '',
+    'SHOT-BY-SHOT SEQUENCE',
+    ...shots.flatMap(([title, direction]) => [title, direction, 'Maintain exact character, wardrobe, location, lighting, and screen-direction continuity.', '']),
+    'CAMERA AND COMPOSITION',
+    'Use the shot progression above as a coherent sequence. Keep camera movement controlled and motivated. Avoid sudden transitions.',
+    buildCameraDirection(scene, visualStyle),
+    '',
+    'AUDIO AND DIALOGUE CONTINUITY',
+    sound,
+    dialogueBlock,
+    '',
+    'OUTPUT',
+    `Visual style: ${visualStyle}`,
+    `Aspect ratio: ${ratio}`,
+    'Cinematic 24fps motion. Each shot must feel like part of the same uninterrupted scene.',
+    'IMPORTANT: Generate the shots as separate clips when the video tool cannot reliably render multiple shot changes in one generation.',
+  ].join('\n');
 }
 
 export function buildMasterCharacterReferenceSheet(bible: StoryBible, visualStyle: string, ratio: string): string {
