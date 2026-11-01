@@ -84,6 +84,7 @@ export default function App() {
 
   // UI States
   const [selectedPromptTool, setSelectedPromptTool] = useState<'standard' | 'midjourney' | 'flux' | 'runway_kling'>('standard');
+  const [videoPromptMode, setVideoPromptMode] = useState<'standard' | 'cinematic'>('standard');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [activeBibleTab, setActiveBibleTab] = useState<'char' | 'world' | 'visual' | 'rules'>('char');
@@ -236,7 +237,10 @@ export default function App() {
         language: dialogueLanguage,
       });
       const bibleResult = generated.bible;
-      const finalScenes = generated.scenes;
+      const finalScenes = generated.scenes.map((scene, index) => ({
+        ...scene,
+        video: buildVideoPrompt(bibleResult, scene, index, effectiveStyle, aspectRatio, dialogueLanguage, videoPromptMode),
+      }));
 
       setGenerationStep('Mengunci identitas karakter dan merakit prompt produksi...');
       setProjectTitle(bibleResult.title || projectTitle);
@@ -275,12 +279,22 @@ export default function App() {
     }
   };
 
+  const handleChangeVideoPromptMode = (mode: 'standard' | 'cinematic') => {
+    setVideoPromptMode(mode);
+    if (!storyBible || scenes.length === 0) return;
+    setScenes((current) => current.map((scene, index) => ({
+      ...scene,
+      video: buildVideoPrompt(storyBible, scene, index, effectiveStyle, aspectRatio, dialogueLanguage, mode),
+    })));
+    showToast(mode === 'standard' ? 'Standard Mode diterapkan ke semua scene.' : 'Cinematic Mode diterapkan ke semua scene.');
+  };
+
   const handleReapplyBible = () => {
     if (!storyBible || scenes.length === 0) return;
     const updated = scenes.map((s, idx) => ({
       ...s,
       image: buildImagePrompt(storyBible, s, idx, effectiveStyle, aspectRatio),
-      video: buildVideoPrompt(storyBible, s, idx, effectiveStyle, aspectRatio, dialogueLanguage),
+      video: buildVideoPrompt(storyBible, s, idx, effectiveStyle, aspectRatio, dialogueLanguage, videoPromptMode),
     }));
     setScenes(updated);
     showToast('Story Bible berhasil diperbarui ke semua prompt scene.');
@@ -291,7 +305,7 @@ export default function App() {
     const updated = [...scenes];
     updated[index] = { ...updated[index], [field]: value };
     updated[index].image = buildImagePrompt(storyBible, updated[index], index, effectiveStyle, aspectRatio);
-    updated[index].video = buildVideoPrompt(storyBible, updated[index], index, effectiveStyle, aspectRatio, dialogueLanguage);
+    updated[index].video = buildVideoPrompt(storyBible, updated[index], index, effectiveStyle, aspectRatio, dialogueLanguage, videoPromptMode);
     setScenes(updated);
   };
 
@@ -1216,6 +1230,17 @@ export default function App() {
                     <span className="text-xs text-[#73767c]">
                       Prompt gambar dan video terpisah dengan arahan kamera dan desain audio.
                     </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-[#555]">Mode Video:</span>
+                    <button type="button" onClick={() => handleChangeVideoPromptMode('standard')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${videoPromptMode === 'standard' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
+                      Standard — 1 Scene / 1 Prompt
+                    </button>
+                    <button type="button" onClick={() => handleChangeVideoPromptMode('cinematic')} className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${videoPromptMode === 'cinematic' ? 'bg-[#fff0e8] border-[#ff7a00] text-[#9a3d00]' : 'bg-white border-[#e6e4dc] text-[#73767c]'}`}>
+                      Cinematic — Multi-Shot
+                    </button>
+                    <span className="text-[11px] text-[#73767c]">Default: Standard</span>
                   </div>
 
                   {/* Format Filter & Export Buttons */}
