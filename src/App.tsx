@@ -37,7 +37,6 @@ import {
 import { SceneData, StoryBible, ProjectData, ConnectionStatus } from './types';
 import {
   buildImagePrompt,
-  buildVideoPrompt,
   buildMasterCharacterReferenceSheet,
   formatPromptForTool,
 } from './services/supabaseAicrative';
@@ -85,6 +84,8 @@ export default function App() {
   // UI States
   const [selectedPromptTool, setSelectedPromptTool] = useState<'standard' | 'midjourney' | 'flux' | 'runway_kling'>('standard');
   const [videoPromptMode, setVideoPromptMode] = useState<'standard' | 'cinematic'>('standard');
+  const [isOptimizingVideoPrompts, setIsOptimizingVideoPrompts] = useState<boolean>(false);
+  const [videoPromptError, setVideoPromptError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [activeBibleTab, setActiveBibleTab] = useState<'char' | 'world' | 'visual' | 'rules'>('char');
@@ -222,6 +223,21 @@ export default function App() {
     setShowLanguageModal(true);
   };
 
+  const requestFlowVideoPrompts = async (project: Pick<ProjectData, 'title' | 'visualStyle' | 'aspectRatio' | 'dialogueLanguage' | 'bible'>, sourceScenes: SceneData[], mode: 'standard' | 'cinematic') => {
+    const response = await fetch('/api/video-prompts', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project, scenes: sourceScenes, mode }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.message || 'Gagal menerjemahkan Video Prompt.');
+    if (!Array.isArray(payload.prompts) || payload.prompts.length !== sourceScenes.length || payload.prompts.some((prompt: unknown) => typeof prompt !== 'string' || !prompt.trim())) {
+      throw new Error('Hasil Video Prompt belum lengkap untuk seluruh scene. Silakan coba lagi.');
+    }
+    return payload.prompts as string[];
+  };
+
   const handleExecuteGeneration = async () => {
     setShowLanguageModal(false);
     setIsGenerating(true);
@@ -237,10 +253,10 @@ export default function App() {
         language: dialogueLanguage,
       });
       const bibleResult = generated.bible;
-      const finalScenes = generated.scenes.map((scene, index) => ({
-        ...scene,
-        video: buildVideoPrompt(bibleResult, scene, index, effectiveStyle, aspectRatio, dialogueLanguage, videoPromptMode),
-      }));
+      setGenerationStep('Menerjemahkan dan mengoptimalkan Video Prompt untuk seluruh scene...');
+      const projectForTranslation = { title: bibleResult.title || projectTitle, visualStyle: effectiveStyle, aspectRatio, dialogueLanguage, bible: bibleResult };
+      const translatedPrompts = await requestFlowVideoPrompts(projectForTranslation, generated.scenes, videoPromptMode);
+      const finalScenes = generated.scenes.map((scene, index) => ({ ...scene, video: translatedPrompts[index] }));
 
       setGenerationStep('Mengunci identitas karakter dan merakit prompt produksi...');
       setProjectTitle(bibleResult.title || projectTitle);
@@ -266,38 +282,66 @@ export default function App() {
         await saveCloudProject(newProj);
         await refreshCloudProjects();
       }
-      showToast('Character, Story, Scene, Image Prompt, dan Video Prompt berhasil dibuat secara lokal.');
+      setVideoPromptError(null);
+      showToast('Semua scene dan Video Prompt Flow berhasil dibuat.');
       setTimeout(() => {
         document.getElementById('productionResults')?.scrollIntoView({ behavior: 'smooth' });
       }, 250);
     } catch (error) {
       console.error('Local Creative Engine error:', error);
-      showToast('Generator lokal mengalami kendala. Periksa kembali input proyek.');
+      setVideoPromptError(error instanceof Error ? error.message : 'Video Prompt gagal diproses.');
+      showToast(error instanceof Error ? error.message : 'Video Prompt gagal diproses.');
     } finally {
       setIsGenerating(false);
       setGenerationStep('');
     }
   };
 
-  const handleChangeVideoPromptMode = (mode: 'standard' | 'cinematic') => {
-    setVideoPromptMode(mode);
-    if (!storyBible || scenes.length === 0) return;
-    setScenes((current) => current.map((scene, index) => ({
-      ...scene,
-      video: buildVideoPrompt(storyBible, scene, index, effectiveStyle, aspectRatio, dialogueLanguage, mode),
-    })));
-    showToast(mode === 'standard' ? 'Standard Mode diterapkan ke semua scene.' : 'Cinematic Mode diterapkan ke semua scene.');
+  const handleChangeVideoPromptMode = async (mode: 'standard' | 'cinematic') => {
+    if (!storyBible || scenes.length === 0 || isOptimizingVideoPrompts) return;
+    setIsOptimizingVideoPrompts(true);
+    setVideoPromptError(null);
+    try {
+      const prompts = await requestFlowVideoPrompts(
+        { title: storyBible.title || projectTitle, visualStyle: effectiveStyle, aspectRatio, dialogueLanguage, bible: storyBible },
+        scenes,
+        mode,
+      );
+      setScenes(current => current.map((scene, index) => ({ ...scene, video: prompts[index] })));
+      setVideoPromptMode(mode);
+      showToast(mode === 'standard' ? 'Standard Mode diterapkan ke seluruh scene.' : 'Cinematic Mode diterapkan ke seluruh scene.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gagal memperbarui seluruh Video Prompt.';
+      setVideoPromptError(message);
+      showToast(message);
+    } finally {
+      setIsOptimizingVideoPrompts(false);
+    }
   };
 
-  const handleReapplyBible = () => {
-    if (!storyBible || scenes.length === 0) return;
-    const updated = scenes.map((s, idx) => ({
-      ...s,
-      image: buildImagePrompt(storyBible, s, idx, effectiveStyle, aspectRatio),
-      video: buildVideoPrompt(storyBible, s, idx, effectiveStyle, aspectRatio, dialogueLanguage, videoPromptMode),
-    }));
-    setScenes(updated);
-    showToast('Story Bible berhasil diperbarui ke semua prompt scene.');
+  const handleReapplyBible = async () => {
+    if (!storyBible || scenes.length === 0 || isOptimizingVideoPrompts) return;
+    setIsOptimizingVideoPrompts(true);
+    setVideoPromptError(null);
+    try {
+      const prompts = await requestFlowVideoPrompts(
+        { title: storyBible.title || projectTitle, visualStyle: effectiveStyle, aspectRatio, dialogueLanguage, bible: storyBible },
+        scenes,
+        videoPromptMode,
+      );
+      setScenes(current => current.map((scene, index) => ({
+        ...scene,
+        image: buildImagePrompt(storyBible, scene, index, effectiveStyle, aspectRatio),
+        video: prompts[index],
+      })));
+      showToast('Story Bible dan seluruh Video Prompt berhasil diperbarui.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Gagal memperbarui Video Prompt.';
+      setVideoPromptError(message);
+      showToast(message);
+    } finally {
+      setIsOptimizingVideoPrompts(false);
+    }
   };
 
   const handleUpdateScene = (index: number, field: keyof SceneData, value: string) => {
@@ -305,7 +349,6 @@ export default function App() {
     const updated = [...scenes];
     updated[index] = { ...updated[index], [field]: value };
     updated[index].image = buildImagePrompt(storyBible, updated[index], index, effectiveStyle, aspectRatio);
-    updated[index].video = buildVideoPrompt(storyBible, updated[index], index, effectiveStyle, aspectRatio, dialogueLanguage, videoPromptMode);
     setScenes(updated);
   };
 
