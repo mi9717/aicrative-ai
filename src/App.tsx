@@ -41,7 +41,7 @@ import {
   buildMasterCharacterReferenceSheet,
   formatPromptForTool,
 } from './services/supabaseAicrative';
-import { getCurrentUser, signIn, signOut, signUp } from './services/supabaseAuth';
+import { getCurrentUser, signIn, signOut } from './services/supabaseAuth';
 import { clearLegacyLocalProjects, deleteCloudProject, listCloudProjects, readLegacyLocalProjects, saveCloudProject } from './services/projectCloud';
 import { generateLocalCreativeProject } from './engines';
 
@@ -49,10 +49,7 @@ export default function App() {
   // Authentication & Gate State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [passwordInput, setPasswordInput] = useState<string>('');
-  const [emailInput, setEmailInput] = useState<string>('');
-  const [displayNameInput, setDisplayNameInput] = useState<string>('');
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [authNotice, setAuthNotice] = useState<string | null>(null);
+
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -106,7 +103,7 @@ export default function App() {
       setCurrentUserId(user?.id || null);
       if (user) {
         handlePingEngine();
-        await refreshCloudProjects(user.id);
+        await refreshCloudProjects();
         initSampleProject();
       }
     } catch (error) {
@@ -115,12 +112,12 @@ export default function App() {
     }
   };
 
-  const refreshCloudProjects = async (userId: string) => {
+  const refreshCloudProjects = async () => {
     try {
       let projects = await listCloudProjects();
       if (projects.length === 0) {
         const legacy = readLegacyLocalProjects();
-        for (const project of legacy) await saveCloudProject(project, userId);
+        for (const project of legacy) await saveCloudProject(project);
         if (legacy.length) {
           clearLegacyLocalProjects();
           projects = await listCloudProjects();
@@ -172,38 +169,20 @@ export default function App() {
     if (e) e.preventDefault();
     setAuthError(null);
     setAuthNotice(null);
-    if (!emailInput.trim() || !passwordInput) {
-      setAuthError('Masukkan email dan password.');
-      return;
-    }
-    if (authMode === 'register' && !displayNameInput.trim()) {
-      setAuthError('Masukkan nama tampilan.');
+    if (!passwordInput) {
+      setAuthError('Masukkan password akses AICRATIVE.');
       return;
     }
     setIsVerifyingAuth(true);
     try {
-      if (authMode === 'register') {
-        const result = await signUp(emailInput.trim(), passwordInput, displayNameInput.trim());
-        if (!result.session) {
-          setAuthNotice(result.message);
-          setAuthMode('login');
-        } else {
-          setIsAuthenticated(true);
-          setCurrentUserId(result.session.user.id);
-          await refreshCloudProjects(result.session.user.id);
-          initSampleProject();
-          showToast('Akun AICRATIVE berhasil dibuat.');
-        }
-      } else {
-        const session = await signIn(emailInput.trim(), passwordInput);
-        setIsAuthenticated(true);
-        setCurrentUserId(session.user.id);
-        await refreshCloudProjects(session.user.id);
-        initSampleProject();
-        handlePingEngine();
-        showToast('Berhasil masuk ke AICRATIVE.');
-      }
+      await signIn(passwordInput);
+      setIsAuthenticated(true);
+      setCurrentUserId('shared-workspace');
+      await refreshCloudProjects();
+      initSampleProject();
+      handlePingEngine();
       setPasswordInput('');
+      showToast('Berhasil masuk ke AICRATIVE.');
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : 'Autentikasi gagal.');
     } finally {
@@ -281,8 +260,8 @@ export default function App() {
         updatedAt: new Date().toISOString(),
       };
       if (currentUserId) {
-        await saveCloudProject(newProj, currentUserId);
-        await refreshCloudProjects(currentUserId);
+        await saveCloudProject(newProj);
+        await refreshCloudProjects();
       }
       showToast('Character, Story, Scene, Image Prompt, dan Video Prompt berhasil dibuat secara lokal.');
       setTimeout(() => {
@@ -335,8 +314,8 @@ export default function App() {
       updatedAt: new Date().toISOString(),
     };
     try {
-      await saveCloudProject(proj, currentUserId);
-      await refreshCloudProjects(currentUserId);
+      await saveCloudProject(proj);
+      await refreshCloudProjects();
       showToast(`Proyek "${proj.title}" berhasil disimpan ke cloud.`);
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Gagal menyimpan proyek.');
@@ -364,7 +343,7 @@ export default function App() {
     if (!window.confirm('Hapus proyek ini secara permanen dari koleksi cloud?')) return;
     try {
       await deleteCloudProject(id);
-      if (currentUserId) await refreshCloudProjects(currentUserId);
+      if (currentUserId) await refreshCloudProjects();
       showToast('Proyek berhasil dihapus dari koleksi cloud.');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Gagal menghapus proyek.');
@@ -519,29 +498,22 @@ export default function App() {
                 <Lock className="w-5 h-5" />
               </div>
               <h1 className="text-xl font-semibold tracking-tight">AICRATIVE Studio</h1>
-              <p className="text-xs text-[#73767c] leading-relaxed">Buat akun gratis atau masuk untuk menyimpan proyek di cloud.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-lg bg-[#f7f6f2]">
-              <button type="button" onClick={() => { setAuthMode('login'); setAuthError(null); setAuthNotice(null); }} className={`py-2 rounded-md text-xs font-medium ${authMode === 'login' ? 'bg-white shadow-sm text-[#141619]' : 'text-[#73767c]'}`}>Masuk</button>
-              <button type="button" onClick={() => { setAuthMode('register'); setAuthError(null); setAuthNotice(null); }} className={`py-2 rounded-md text-xs font-medium ${authMode === 'register' ? 'bg-white shadow-sm text-[#141619]' : 'text-[#73767c]'}`}>Daftar gratis</button>
+              <p className="text-xs text-[#73767c] leading-relaxed">Masukkan satu password akses untuk membuka Studio dan ruang proyek bersama.</p>
             </div>
             {authError && <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" /><span className="leading-relaxed">{authError}</span></div>}
-            {authNotice && <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800">{authNotice}</div>}
             <form onSubmit={handleLoginSubmit} className="space-y-3.5">
-              {authMode === 'register' && <div><label className="text-xs font-medium block mb-1.5">Nama tampilan</label><input type="text" value={displayNameInput} onChange={e => setDisplayNameInput(e.target.value)} placeholder="Nama Anda" autoComplete="name" className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" /></div>}
-              <div><label className="text-xs font-medium block mb-1.5">Email</label><input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="nama@email.com" autoComplete="email" required className="w-full px-3.5 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" /></div>
               <div>
-                <label className="text-xs font-medium block mb-1.5">Password</label>
+                <label className="text-xs font-medium block mb-1.5">Password akses</label>
                 <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Minimal 6 karakter" autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} minLength={6} required className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" />
+                  <input type={showPassword ? 'text' : 'password'} value={passwordInput} onChange={e => setPasswordInput(e.target.value)} placeholder="Masukkan password akses" autoComplete="current-password" required className="w-full pl-3.5 pr-10 py-2.5 rounded-lg border border-[#dcd9d0] text-sm bg-white focus:outline-hidden focus:border-[#ff5a1f]" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#73767c]">{showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
                 </div>
               </div>
               <button type="submit" disabled={isVerifyingAuth} className="w-full py-2.5 rounded-lg bg-[#ff5a1f] hover:bg-[#e64a12] text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50">
-                {isVerifyingAuth ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Memproses...</span></> : <><span>{authMode === 'register' ? 'Buat akun gratis' : 'Masuk ke Studio'}</span><ArrowRight className="w-4 h-4" /></>}
+                {isVerifyingAuth ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Memproses...</span></> : <><span>Masuk ke Studio</span><ArrowRight className="w-4 h-4" /></>}
               </button>
             </form>
-            <p className="text-[11px] text-[#8c8f95] text-center">Akun gratis. Prompt dibuat secara lokal tanpa API AI eksternal.</p>
+            <p className="text-[11px] text-[#8c8f95] text-center">Satu password untuk semua pengguna. Proyek tersimpan di ruang cloud bersama.</p>
           </div>
         </div>
         <footer className="max-w-md mx-auto w-full pb-4 text-center text-xs text-[#8c8f95]">© AICRATIVE AI Creative Production Studio</footer>
