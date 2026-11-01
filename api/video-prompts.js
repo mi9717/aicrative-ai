@@ -78,7 +78,7 @@ function composePrompt(project, scene, translated, index, mode) {
     dialogueBlock,
     '',
     'OUTPUT',
-    'Visual style: ' + str(project.visualStyle, 200),
+    'Visual style direction: ' + translated.visualDirection,
     'Aspect ratio: ' + str(project.aspectRatio, 20),
     'Cinematic 24fps motion. Keep the scene coherent from first frame to last.',
   ];
