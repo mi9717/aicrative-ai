@@ -1,4 +1,5 @@
 import { createHmac, createHash, timingSafeEqual } from 'node:crypto';
+import { buildShotBrief, buildContinuityAudit } from './lib/flow-prompt-structure.js';
 
 const COOKIE = 'aicrative_access';
 const TTL = 30 * 24 * 60 * 60;
@@ -50,10 +51,14 @@ function composePrompt(project, scene, translated, index, mode) {
     'Visual event: ' + translated.action,
     'Show one clear, continuous, non-graphic visual event. Keep background activity secondary.',
     '',
+    buildShotBrief({ translated, camera, dialogueBlock, aspectRatio: project.aspectRatio }),
+    '',
     'CHARACTER IDENTITY AND CONTINUITY',
     translated.character,
     'Preserve the same face, age, hairstyle, skin tone, body proportions, wardrobe, footwear, and accessories in every frame. Use the supplied character reference as the source of truth.',
     'No identity drift, face morphing, costume changes, flicker, warped anatomy, or extra limbs.',
+    '',
+    buildContinuityAudit(translated),
     '',
     'WORLD AND VISUAL DIRECTION',
     translated.world,
@@ -66,6 +71,7 @@ function composePrompt(project, scene, translated, index, mode) {
     'CAMERA DIRECTION',
     camera,
     'Use one continuous camera movement and keep the main subject clearly visible.',
+    'Choose framing and camera movement to clarify the visible action; do not use camera movement as decoration.',
     '',
     'LIGHTING AND COMPOSITION',
     'Use coherent cinematic lighting, natural shadows, a clear focal point, and consistent environmental materials.',
